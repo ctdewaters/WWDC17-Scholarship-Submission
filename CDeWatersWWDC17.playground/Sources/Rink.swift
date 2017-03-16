@@ -4,11 +4,19 @@ import GameplayKit
 
 public let rinkSize = CGSize(width: 513, height: 1024)
 public let rinkCenterCircleWidth: CGFloat = 155
-public let RINK_EDGE_CATEGORY: UInt32 = 0x1
 
 public let sceneBackgroundColor = UIColor(red:0.13, green:0.13, blue:0.13, alpha:1.0)
 
-open class Rink: SKScene, JoystickDelegate {
+public struct PhysicsCategory {
+    static let none      : UInt32 = 0
+    static let all       : UInt32 = UInt32.max
+    static let puck   : UInt32 = 0b1 // 1
+    static let player: UInt32 = 0b10 // 2
+    static let rink: UInt32 = 0b11 // 3
+}
+
+
+open class Rink: SKScene, JoystickDelegate, SwitchPlayerButtonDelegate, SKPhysicsContactDelegate {
     
     open var userTeam: UserTeam?
     open var opposingTeam: Team?
@@ -29,7 +37,35 @@ open class Rink: SKScene, JoystickDelegate {
         }
         return nil
     }
+    
+    //Returns the player on either team that is currently carrying the puck
+    fileprivate var userPuckCarrier: UnsafeMutablePointer<UserPlayerNode>? {
+        if let userTeam = userTeam {
+            for player in userTeam {
+                if player.playerNode.hasPuck {
+                    let pointer = UnsafeMutablePointer<UserPlayerNode>.allocate(capacity: 1)
+                    pointer.pointee = player
+                    return pointer
+                }
+            }
+        }
+        return nil
+    }
+    
+    fileprivate var opposingPuckCarrier: UnsafeMutablePointer<PlayerNode>? {
+        if let opposingTeam = opposingTeam {
+            for player in opposingTeam {
+                if player.hasPuck {
+                    let pointer = UnsafeMutablePointer<PlayerNode>.allocate(capacity: 1)
+                    pointer.pointee = player
+                    return pointer
+                }
+            }
+        }
+        return nil
+    }
 
+    //The camera for the scene
     let cameraNode: SKCameraNode = SKCameraNode()
     
     fileprivate var backgroundNode: SKSpriteNode!
@@ -64,13 +100,15 @@ open class Rink: SKScene, JoystickDelegate {
     open func setPhysicsWorld() {
         self.physicsWorld.gravity = CGVector.zero
         self.position = CGPoint(x: 0, y: 0)
+        self.physicsWorld.contactDelegate = self
         
         let pathFrame = CGRect(x: (self.frame.origin.y + rinkSize.width / 4) - 16, y: self.frame.origin.y - 143, width: rinkSize.width, height: rinkSize.height)
         let bezierPath = UIBezierPath(roundedRect: pathFrame, cornerRadius: rinkSize.width / 4)
         
         self.physicsBody = SKPhysicsBody(edgeLoopFrom: bezierPath.cgPath)
-        self.physicsBody?.contactTestBitMask = RINK_EDGE_CATEGORY
-        self.physicsBody?.categoryBitMask = RINK_EDGE_CATEGORY
+        self.physicsBody?.categoryBitMask = PhysicsCategory.rink
+        self.physicsBody?.collisionBitMask = PhysicsCategory.all
+        self.physicsBody?.contactTestBitMask =  PhysicsCategory.puck
     }
     
     //Generates and adds nodes for both teams, the puck, and the rink
@@ -163,7 +201,6 @@ open class Rink: SKScene, JoystickDelegate {
                 userTeam[1].select()
             }
         }
-        print(self.selectedPlayer?.pointee)
     }
     
     open override func update(_ currentTime: TimeInterval) {
@@ -174,7 +211,6 @@ open class Rink: SKScene, JoystickDelegate {
             selectedPlayer.pointee.move(withJoystickData: joystickData)
         }
         
-        
         //Follow puck location
         updateCameraPosition()
     }
@@ -184,25 +220,31 @@ open class Rink: SKScene, JoystickDelegate {
         if let position = position {
             point = position
         }
+        else if let userPuckCarrier = userPuckCarrier {
+            point = userPuckCarrier.pointee.position
+        }
+        else if let opposingPuckCarrier = opposingPuckCarrier {
+            point = opposingPuckCarrier.pointee.position
+        }
         else if let puck = puck {
             //calculate point to move camera to
             point = puck.position
-            
-            //generating x
-            if point.x < -180 {
-                point.x = -180
-            }
-            else if point.x > 180 {
-                point.x = 180
-            }
-            
-            if point.y > 380 {
-                point.y = 380
-            }
-            else if point.y < -380 {
-                point.y = -380
-            }
         }
+        
+        //Keeping view on the ice
+        if point.x < -180 {
+            point.x = -180
+        }
+        else if point.x > 180 {
+            point.x = 180
+        }
+        if point.y > 380 {
+            point.y = 380
+        }
+        else if point.y < -380 {
+            point.y = -380
+        }
+
         let action = SKAction.move(to: point, duration: 0.25)
         cameraNode.run(action)
 
@@ -210,6 +252,32 @@ open class Rink: SKScene, JoystickDelegate {
     
     public func faceoffDotCoordinate(forLocation location: FaceoffLocation) -> CGPoint {
         return location.coordinate
+    }
+    
+    //MARK: - SKPhysicsContactDelegate
+    public func didBegin(_ contact: SKPhysicsContact) {
+        let bodyA = contact.bodyA
+        let bodyB = contact.bodyB
+        
+        
+        if bodyA.categoryBitMask == PhysicsCategory.rink && bodyB.categoryBitMask == PhysicsCategory.puck {
+            //Puck hit the boards
+            //SoundEffectPlayer.boards.play(soundEffect: .puckHitBoards)
+        }
+        
+        if bodyA.categoryBitMask == PhysicsCategory.player && bodyB.categoryBitMask == PhysicsCategory.puck {
+            //Puck hit player
+            
+            if let playerNode = bodyA.node as? UserPlayerNode {
+                playerNode.playerNode.pickUp(puck: &self.puck!)
+            }
+            
+            
+        }
+    }
+    
+    public func didEnd(_ contact: SKPhysicsContact) {
+        
     }
     
     //MARK: - JoystickDelegate
@@ -230,10 +298,28 @@ open class Rink: SKScene, JoystickDelegate {
         if let selectedPlayer = selectedPlayer {
             selectedPlayer.pointee.playerNode.stopSkatingAction()
             selectedPlayer.pointee.playerNode.texture = faceoffTexture
+            selectedPlayer.pointee.applySkatingImpulse()
         }
+    }
+    
+    //MARK: - SwitchPlayerButtonDelegate
+    
+    public func buttonDidRecieveUserInput(switchPlayerButton button: SwitchPlayerButton) {
+        self.selectPlayerClosestToPuck()
     }
 }
 
+//Pair of SKPhysicsBodies
+fileprivate class PhysicsBodyPair {
+    var bodyA, bodyB: SKPhysicsBody!
+    
+    init(a: SKPhysicsBody, andB b: SKPhysicsBody) {
+        self.bodyA = a
+        self.bodyB = b
+    }
+}
+
+//Faceoff locations on the playing surface
 public enum FaceoffLocation {
     case offsideTopRight, offsideTopLeft, offsideBottomRight, offsideBottomLeft, centerIce
     

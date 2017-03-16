@@ -4,13 +4,11 @@ public typealias Team = [PlayerNode]
 public typealias UserTeam = [UserPlayerNode]
 
 public let faceoffTexture = SKTexture(image: UIImage(named: "faceoffPosition.png")!)
-
 fileprivate let nodeSize = CGSize(width: 25, height: 50)
 
 open class PlayerNode: SKSpriteNode {
 
     fileprivate var skatingAction: SKAction?
-    fileprivate var hasPuck = false
     
     fileprivate var selectionNode = SKShapeNode()
     
@@ -19,6 +17,17 @@ open class PlayerNode: SKSpriteNode {
     open var skatingTextures: [SKTexture]?
     open var playerPosition: PlayerPosition!
     open var isOnOpposingTeam: Bool!
+    
+    open var hasPuck = false
+    
+    fileprivate var puck: PuckNode? {
+        for child in children {
+            if let puck = child as? PuckNode {
+                return puck
+            }
+        }
+        return nil
+    }
     
     public init(withColor color: SKColor = .white, andPosition playerPosition: PlayerPosition) {
         //Load textures
@@ -36,6 +45,14 @@ open class PlayerNode: SKSpriteNode {
     
     public required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    public func pickUp(puck: inout PuckNode) {
+        puck.removeFromParent()
+        puck.physicsBody = nil
+        puck.position = CGPoint(x: -4, y: 17)
+        self.addChild(puck)
+        self.hasPuck = true
     }
     
     //Loading textures from resources
@@ -59,20 +76,20 @@ open class PlayerNode: SKSpriteNode {
         self.physicsBody = physicsBody
         self.physicsBody?.isDynamic = true
         self.physicsBody?.mass = 1
+        self.physicsBody?.categoryBitMask = PhysicsCategory.player
+        self.physicsBody?.collisionBitMask = PhysicsCategory.all
+        self.physicsBody?.contactTestBitMask = PhysicsCategory.puck
     }
     
     fileprivate func generatePath() -> CGPath {
         
-        let rect = CGRect(x: self.frame.origin.x, y: self.frame.origin.y + 5, width: self.frame.width, height: self.frame.width)
+        let rect = CGRect(x: self.frame.origin.x + 5, y: self.frame.origin.y + 5, width: self.frame.width - 10, height: self.frame.height - 25)
         let path = UIBezierPath(roundedRect: rect, cornerRadius: self.frame.width / 2)
         
         return path.cgPath
     }
     
     open func applySkatingForce(usingPoint point: CGPoint) {
-        let xDiff = self.position.x - point.x
-        let yDiff = self.position.y - point.y
-        
         self.rotate(toFacePoint: point, withDuration: 0.25)
         
         let action = SKAction.move(to: point, duration: 0.4)
@@ -93,11 +110,21 @@ open class PlayerNode: SKSpriteNode {
         print("RUNNING SKATING TEXTURES")
         self.skatingAction = SKAction.repeatForever(SKAction.animate(with: self.skatingTextures!, timePerFrame: 0.05))
         self.run(self.skatingAction!, withKey: "skatingAction")
+        
+        if let puck = puck {
+            let moveAction = SKAction.moveTo(x: -4, duration: 0.15)
+            puck.run(moveAction)
+        }
     }
     
     open func stopSkatingAction() {
         self.removeAction(forKey: "skatingAction")
         self.skatingAction = nil
+        
+        if let puck = puck {
+            let moveAction = SKAction.moveTo(x: -9, duration: 0.15)
+            puck.run(moveAction)
+        }
     }
     
 }
@@ -121,18 +148,6 @@ open class UserPlayerNode: SKNode {
         fatalError("init(coder:) has not been implemented")
     }
     
-    open func move(toPoint point: CGPoint) {
-        self.rotate(toFacePoint: point, withDuration: 0.1)
-        
-        
-        let rotateAction = self.rotateAction(toFacePoint: point, withDuration: 0.0)
-        let moveAction = SKAction.move(to: point, duration: 0.5)
-        
-        let actions = SKAction.sequence([rotateAction, moveAction])
-        self.playerNode.run(actions)
-        self.selectionNode.run(actions)
-    }
-    
     open func move(withJoystickData data: JoystickData) {
         
         self.run(self.rotateAction(toAngle: data.angle))
@@ -146,11 +161,20 @@ open class UserPlayerNode: SKNode {
         self.position.y += normalizedPoint.y * playerSpeed
     }
     
+    open func applySkatingImpulse() {
+        let vector = CGVector(withMagnitude: self.playerNode.speed, andDirectionAngle: self.zRotation)
+        
+        let impulseAction = SKAction.applyImpulse(vector, duration: 0.5)
+        self.run(impulseAction)
+    }
+    
+    
     //Select player
     open func select() {
         self.isSelected = true
         self.selectionNode = SKShapeNode(circleOfRadius: nodeSize.width / 2)
         self.selectionNode.fillColor = SKColor.blue.withAlphaComponent(0.3)
+        self.selectionNode.strokeColor = SKColor.blue
         self.selectionNode.position = CGPoint(x: 0, y: -10)
         self.selectionNode.zPosition = 0
         
@@ -173,6 +197,9 @@ open class UserPlayerNode: SKNode {
         self.physicsBody = physicsBody
         self.physicsBody?.isDynamic = true
         self.physicsBody?.mass = 1
+        self.physicsBody?.categoryBitMask = PhysicsCategory.player
+        self.physicsBody?.contactTestBitMask = PhysicsCategory.none
+        self.physicsBody?.contactTestBitMask = PhysicsCategory.rink | PhysicsCategory.puck
     }
     
     fileprivate func rotateAction(toFacePoint point: CGPoint, withDuration duration: TimeInterval) -> SKAction {
@@ -233,5 +260,12 @@ public enum PlayerPosition: Int {
         default :
             return false
         }
+    }
+}
+
+fileprivate extension CGVector {
+    init(withMagnitude magnitude: CGFloat, andDirectionAngle angle: CGFloat) {
+        self.dx = magnitude * cos(angle)
+        self.dy = magnitude * sin(angle)
     }
 }

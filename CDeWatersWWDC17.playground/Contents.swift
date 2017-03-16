@@ -12,8 +12,9 @@ import PlaygroundSupport
 let skView = SKView(frame: CGRect(x: 0, y: 0, width: 414, height: 736))
 skView.contentMode = .scaleToFill
 skView.backgroundColor = sceneBackgroundColor
-skView.showsFields = true
-skView.showsPhysics = true
+
+skView.showsNodeCount = true
+skView.showsFPS = true
 
 let rink = Rink(size: CGSize(width: 728, height: 1024))
 rink.scaleMode = .resizeFill
@@ -39,6 +40,11 @@ rink.selectPlayerClosestToPuck()
 let joystick = Joystick(frame: CGRect(x: 20, y: skView.frame.maxY - joystickSize - 20, width: joystickSize, height: joystickSize))
 joystick.delegate = rink
 skView.addSubview(joystick)
+
+let button = SwitchPlayerButton(frame: CGRect(x: skView.frame.maxX - buttonSize - 20 , y: skView.frame.maxY - buttonSize - 20, width: buttonSize, height: buttonSize))
+button.center.y = joystick.center.y
+button.delegate = rink
+skView.addSubview(button)
 
 PlaygroundPage.current.liveView = skView
 
