@@ -16,7 +16,7 @@ open class PuckNode: SKShapeNode {
         setPhysicsBody()
     }
     
-    func setPhysicsBody() {
+    public func setPhysicsBody() {
         self.physicsBody = SKPhysicsBody(circleOfRadius: diameter / 2, center: CGPoint(x: diameter / 2, y: diameter / 2))
         self.physicsBody?.mass = 0.01
         self.physicsBody?.allowsRotation = false

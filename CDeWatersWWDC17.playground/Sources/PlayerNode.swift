@@ -9,7 +9,6 @@ fileprivate let nodeSize = CGSize(width: 25, height: 50)
 open class PlayerNode: SKSpriteNode {
 
     fileprivate var skatingAction: SKAction?
-    
     fileprivate var selectionNode = SKShapeNode()
     
     open var pSpeed: CGFloat = 10
@@ -17,8 +16,9 @@ open class PlayerNode: SKSpriteNode {
     open var skatingTextures: [SKTexture]?
     open var playerPosition: PlayerPosition!
     open var isOnOpposingTeam: Bool!
-    
     open var hasPuck = false
+    
+    open var rinkReference: UnsafeMutablePointer<Rink>?
     
     fileprivate var puck: PuckNode? {
         for child in children {
@@ -29,7 +29,7 @@ open class PlayerNode: SKSpriteNode {
         return nil
     }
     
-    public init(withColor color: SKColor = .white, andPosition playerPosition: PlayerPosition) {
+    public init(withColor color: SKColor = .white, rinkReference rink: Rink, andPosition playerPosition: PlayerPosition) {
         //Load textures
         super.init(texture: nil, color: color, size: nodeSize)
         self.playerPosition = playerPosition
@@ -38,6 +38,9 @@ open class PlayerNode: SKSpriteNode {
         self.colorBlendFactor = 0.5
         
         self.zPosition = 0
+        
+        self.rinkReference = UnsafeMutablePointer<Rink>.allocate(capacity: 1)
+        self.rinkReference?.pointee = rink
         
         //Setting physics body
         self.setPhysicsBody()
@@ -48,6 +51,8 @@ open class PlayerNode: SKSpriteNode {
     }
     
     public func pickUp(puck: inout PuckNode) {
+        print("Player picking up puck")
+        puck.removeAllActions()
         puck.removeFromParent()
         puck.physicsBody = nil
         puck.position = CGPoint(x: -4, y: 17)
@@ -135,9 +140,29 @@ open class UserPlayerNode: SKNode {
     
     var isSelected = false
     
-    public init(withColor color: SKColor = .white, andPosition playerPosition: PlayerPosition) {
+    public var hasPuck: Bool {
+        return self.playerNode.hasPuck
+    }
+    
+    //The point at the front tip of the node
+    public var frontPoint: CGPoint {
+        let startPoint = self.position // center of node
+        let angle = self.zRotation
+        let halfLength = self.frame.height / 2
+        
+        let xDiff = halfLength * cos(angle)
+        let yDiff = halfLength * cos(angle)
+        
+        return CGPoint(x: startPoint.x + xDiff, y: startPoint.y + yDiff)
+    }
+    
+    fileprivate var rinkReference: UnsafeMutablePointer<Rink>? {
+        return self.playerNode.rinkReference
+    }
+    
+    public init(withColor color: SKColor = .white, rinkReference: Rink, andPosition playerPosition: PlayerPosition) {
         super.init()
-        self.playerNode = PlayerNode(withColor: color, andPosition: playerPosition)
+        self.playerNode = PlayerNode(withColor: color, rinkReference: rinkReference, andPosition: playerPosition)
         self.playerNode.zPosition = 1
         self.addChild(playerNode)
         self.playerNode.physicsBody = nil
@@ -163,11 +188,15 @@ open class UserPlayerNode: SKNode {
     }
     
     open func applySkatingImpulse() {
-        let vector = CGVector(withMagnitude: self.playerNode.speed * 31, andDirectionAngle: self.zRotation)
+        
+        //Remove previous physics
+        self.physicsBody = nil
+        self.setPhysicsBody()
+        
+        let vector = CGVector(withMagnitude: self.playerNode.speed * 35, andDirectionAngle: self.zRotation)
         let impulseAction = SKAction.applyImpulse(vector, duration: 0.35)
         self.run(impulseAction, withKey: "skatingImpulse")
     }
-    
     
     //Select player
     open func select() {
@@ -189,6 +218,21 @@ open class UserPlayerNode: SKNode {
     
     open func rotate(toFacePoint point: CGPoint, withDuration duration: TimeInterval) {
         self.run(self.rotateAction(toFacePoint: point, withDuration: duration))
+    }
+    
+    open func passPuck(toPlayer player: UserPlayerNode) {
+        let puck = rinkReference?.pointee.puck
+        puck?.removeFromParent()
+        puck?.position = self.frontPoint
+        rinkReference?.pointee.addChild(puck!)
+        
+        self.playerNode.hasPuck = false
+        puck?.run(SKAction.move(to: player.frontPoint, duration: 0.7))
+        
+        Timer.scheduledTimer(withTimeInterval: 0.1, repeats: false, block: {
+            timer in
+            puck?.setPhysicsBody()
+        })
     }
     
     fileprivate func setPhysicsBody() {

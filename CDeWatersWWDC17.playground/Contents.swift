@@ -15,6 +15,8 @@ skView.backgroundColor = sceneBackgroundColor
 
 skView.showsNodeCount = true
 skView.showsFPS = true
+skView.showsFields = true
+skView.showsPhysics = true
 
 let rink = Rink(size: CGSize(width: 728, height: 1024))
 rink.scaleMode = .resizeFill
@@ -28,7 +30,7 @@ rink.setPhysicsWorld()
  
  `Rink`'s function `generateAndAddNodes` creates nodes for both teams, the puck, and the rink, and adds them to the scene. This function can take an argument of type `TeamSize`, which defines the amount of players on each team (this defaults to `five` if no argument is passed), and `SKColor`, which defines the color of the players on the "home" team (this defaults to `red`).
  */
-rink.generateAndAddNodes(withTeamSize: TeamSize.five, andHomeTeamColor: SKColor.red)
+rink.generateAndAddNodes(withTeamSize: TeamSize.three, andHomeTeamColor: SKColor.red)
 rink.puck?.position = FaceoffLocation.centerIce.coordinate
 rink.positionPlayers(atFaceoffLocation: .centerIce)
 

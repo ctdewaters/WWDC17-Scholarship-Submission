@@ -131,14 +131,14 @@ open class Rink: SKScene, JoystickDelegate, SwitchPlayerButtonDelegate, SKPhysic
         
         //Generate team 1 (user team)
         for i in 0..<playerCount {
-            let player = UserPlayerNode(withColor: homeColor, andPosition: PlayerPosition(rawValue: i)!)
+            let player = UserPlayerNode(withColor: homeColor, rinkReference: self, andPosition: PlayerPosition(rawValue: i)!)
             player.playerNode.isOnOpposingTeam = false
             userTeam?.append(player)
         }
         
         //Generate team 2 (opposing team)
         for i in 0..<playerCount {
-            let player = PlayerNode(withColor: .white, andPosition: PlayerPosition(rawValue: i)!)
+            let player = PlayerNode(withColor: .white, rinkReference: self, andPosition: PlayerPosition(rawValue: i)!)
             player.isOnOpposingTeam = true
             opposingTeam?.append(player)
         }
@@ -194,6 +194,7 @@ open class Rink: SKScene, JoystickDelegate, SwitchPlayerButtonDelegate, SKPhysic
         return location.playerPosition(forPlayerNode: player)
     }
     
+    //Selects the player closest to the puck, or passes it to the next closest player
     open func selectPlayerClosestToPuck() {
         if var userTeam = userTeam {
             userTeam = userTeam.sorted(by: {
@@ -201,17 +202,25 @@ open class Rink: SKScene, JoystickDelegate, SwitchPlayerButtonDelegate, SKPhysic
                 return player1.distance(fromNode: self.puck!) < player2.distance(fromNode: self.puck!)
             })
             
+            var previousSelection: UserPlayerNode?
             //Deselect currently selected player
             if let selectedPlayer = selectedPlayer {
+                previousSelection = selectedPlayer.pointee
                 selectedPlayer.pointee.deselect()
             }
             
             //Select the player
-            if !userTeam[0].isSelected {
+            if !userTeam[0].isSelected && userTeam[0] != previousSelection {
                 userTeam[0].select()
             }
             else {
                 userTeam[1].select()
+            }
+            
+            if let previousSelection = previousSelection {
+                if previousSelection.hasPuck {
+                    previousSelection.passPuck(toPlayer: (selectedPlayer?.pointee)!)
+                }
             }
         }
     }
@@ -228,12 +237,6 @@ open class Rink: SKScene, JoystickDelegate, SwitchPlayerButtonDelegate, SKPhysic
         updateCameraPosition()
     }
     
-    open override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
-        for touch in touches {
-            let location = touch.location(in: self)
-            print(location)
-        }
-    }
     
     fileprivate func updateCameraPosition(toPosition position: CGPoint? = nil) {
         var point: CGPoint!
@@ -306,7 +309,6 @@ open class Rink: SKScene, JoystickDelegate, SwitchPlayerButtonDelegate, SKPhysic
     }
     
     fileprivate func playerNodeBodiesCollided(bodyA: SKPhysicsBody, bodyB: SKPhysicsBody, withContact contact: SKPhysicsContact) {
-        print(contact.contactNormal)
         if let player1 = physicsBodyToPlayerNode(bodyA) {
             if let uPlayerNode = physicsBodyToUserPlayerNode(bodyB) {
                 let player2 = uPlayerNode.playerNode
@@ -345,6 +347,7 @@ open class Rink: SKScene, JoystickDelegate, SwitchPlayerButtonDelegate, SKPhysic
     //MARK: - SwitchPlayerButtonDelegate
     
     public func buttonDidRecieveUserInput(switchPlayerButton button: SwitchPlayerButton) {
+        
         self.selectPlayerClosestToPuck()
     }
 }
