@@ -22,6 +22,9 @@ open class Rink: SKScene, JoystickDelegate, SwitchPlayerButtonDelegate, SKPhysic
     open var opposingTeam: Team?
     open var puck: PuckNode?
     
+    open var topNet: NetNode?
+    open var bottomNet: NetNode?
+    
     fileprivate var latestJoystickData: JoystickData?
     
     //Returns the selected player on the user controlled team
@@ -101,11 +104,13 @@ open class Rink: SKScene, JoystickDelegate, SwitchPlayerButtonDelegate, SKPhysic
         self.physicsWorld.gravity = CGVector.zero
         self.position = CGPoint(x: 0, y: 0)
         self.physicsWorld.contactDelegate = self
+
         
         let pathFrame = CGRect(x: (self.frame.origin.y + rinkSize.width / 4) - 16, y: self.frame.origin.y - 143, width: rinkSize.width, height: rinkSize.height)
         let bezierPath = UIBezierPath(roundedRect: pathFrame, cornerRadius: rinkSize.width / 4)
         
         self.physicsBody = SKPhysicsBody(edgeLoopFrom: bezierPath.cgPath)
+        self.physicsBody?.friction = 0.35
         self.physicsBody?.categoryBitMask = PhysicsCategory.rink
         self.physicsBody?.collisionBitMask = PhysicsCategory.all
         self.physicsBody?.contactTestBitMask =  PhysicsCategory.puck
@@ -117,6 +122,7 @@ open class Rink: SKScene, JoystickDelegate, SwitchPlayerButtonDelegate, SKPhysic
         add(userTeam!)
         add(opposingTeam!)
         generateAndAddPuck()
+        generateAndAddNets()
     }
     
     fileprivate func generateTeams(withPlayers playerCount: Int, andHomeTeamColor homeColor: SKColor) {
@@ -156,13 +162,20 @@ open class Rink: SKScene, JoystickDelegate, SwitchPlayerButtonDelegate, SKPhysic
         }
     }
     
-    
     fileprivate func generateAndAddPuck() {
         self.puck = PuckNode()
         self.puck?.position = CGPoint(x: 0, y: 0)
         self.addChild(puck!)
         
         self.cameraNode.position = (self.puck?.position)!
+    }
+    
+    fileprivate func generateAndAddNets() {
+        self.topNet = NetNode(atRinkEnd: .top)
+        self.addChild(topNet!)
+        
+        self.bottomNet = NetNode(atRinkEnd: .bottom)
+        self.addChild(bottomNet!)
     }
     
     public func positionPlayers(atFaceoffLocation location: FaceoffLocation) {
@@ -215,6 +228,13 @@ open class Rink: SKScene, JoystickDelegate, SwitchPlayerButtonDelegate, SKPhysic
         updateCameraPosition()
     }
     
+    open override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+        for touch in touches {
+            let location = touch.location(in: self)
+            print(location)
+        }
+    }
+    
     fileprivate func updateCameraPosition(toPosition position: CGPoint? = nil) {
         var point: CGPoint!
         if let position = position {
@@ -259,7 +279,6 @@ open class Rink: SKScene, JoystickDelegate, SwitchPlayerButtonDelegate, SKPhysic
         let bodyA = contact.bodyA
         let bodyB = contact.bodyB
         
-        
         if bodyA.categoryBitMask == PhysicsCategory.rink && bodyB.categoryBitMask == PhysicsCategory.puck {
             //Puck hit the boards
             //SoundEffectPlayer.boards.play(soundEffect: .puckHitBoards)
@@ -271,13 +290,34 @@ open class Rink: SKScene, JoystickDelegate, SwitchPlayerButtonDelegate, SKPhysic
             if let playerNode = bodyA.node as? UserPlayerNode {
                 playerNode.playerNode.pickUp(puck: &self.puck!)
             }
-            
-            
+        }
+        if bodyA.categoryBitMask == PhysicsCategory.player && bodyB.categoryBitMask == PhysicsCategory.player {
+            //Both are players
+            self.playerNodeBodiesCollided(bodyA: bodyA, bodyB: bodyB, withContact: contact)
         }
     }
     
-    public func didEnd(_ contact: SKPhysicsContact) {
-        
+    fileprivate func physicsBodyToPlayerNode(_ body: SKPhysicsBody) -> PlayerNode? {
+        return body.node as? PlayerNode
+    }
+    
+    fileprivate func physicsBodyToUserPlayerNode(_ body: SKPhysicsBody) -> UserPlayerNode? {
+        return body.node as? UserPlayerNode
+    }
+    
+    fileprivate func playerNodeBodiesCollided(bodyA: SKPhysicsBody, bodyB: SKPhysicsBody, withContact contact: SKPhysicsContact) {
+        print(contact.contactNormal)
+        if let player1 = physicsBodyToPlayerNode(bodyA) {
+            if let uPlayerNode = physicsBodyToUserPlayerNode(bodyB) {
+                let player2 = uPlayerNode.playerNode
+                
+            }
+        }
+        if let uPlayerNode = physicsBodyToUserPlayerNode(bodyA) {
+            if let player2 = physicsBodyToPlayerNode(bodyB) {
+                let player1 = uPlayerNode.playerNode
+            }
+        }
     }
     
     //MARK: - JoystickDelegate
@@ -399,4 +439,8 @@ public enum FaceoffLocation {
         
         return point
     }
+}
+
+extension Notification.Name {
+    static let shootPuckNotification = Notification.Name("shootPuckNotification")
 }

@@ -23,6 +23,7 @@ open class PuckNode: SKShapeNode {
         self.physicsBody?.categoryBitMask = PhysicsCategory.puck
         self.physicsBody?.collisionBitMask = PhysicsCategory.all
         self.physicsBody?.contactTestBitMask = PhysicsCategory.rink | PhysicsCategory.player
+        self.physicsBody?.usesPreciseCollisionDetection = true
     }
     
     required public init?(coder aDecoder: NSCoder) {

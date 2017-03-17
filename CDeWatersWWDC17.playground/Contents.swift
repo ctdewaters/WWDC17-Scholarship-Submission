@@ -32,8 +32,8 @@ rink.generateAndAddNodes(withTeamSize: TeamSize.five, andHomeTeamColor: SKColor.
 rink.puck?.position = FaceoffLocation.centerIce.coordinate
 rink.positionPlayers(atFaceoffLocation: .centerIce)
 
-let action = SKAction.applyImpulse(CGVector(dx: 30, dy: 5), duration: 0.5)
-rink.puck?.run(action)
+//let action = SKAction.applyImpulse(CGVector(dx: 30, dy: 5), duration: 0.5)
+//rink.puck?.run(action)
 
 rink.selectPlayerClosestToPuck()
 

@@ -78,7 +78,7 @@ open class PlayerNode: SKSpriteNode {
         self.physicsBody?.mass = 1
         self.physicsBody?.categoryBitMask = PhysicsCategory.player
         self.physicsBody?.collisionBitMask = PhysicsCategory.all
-        self.physicsBody?.contactTestBitMask = PhysicsCategory.puck
+        self.physicsBody?.contactTestBitMask = PhysicsCategory.puck | PhysicsCategory.player
     }
     
     fileprivate func generatePath() -> CGPath {
@@ -149,6 +149,7 @@ open class UserPlayerNode: SKNode {
     }
     
     open func move(withJoystickData data: JoystickData) {
+        self.removeAction(forKey: "skatingImpulse")
         
         self.run(self.rotateAction(toAngle: data.angle))
         
@@ -162,10 +163,9 @@ open class UserPlayerNode: SKNode {
     }
     
     open func applySkatingImpulse() {
-        let vector = CGVector(withMagnitude: self.playerNode.speed, andDirectionAngle: self.zRotation)
-        
-        let impulseAction = SKAction.applyImpulse(vector, duration: 0.5)
-        self.run(impulseAction)
+        let vector = CGVector(withMagnitude: self.playerNode.speed * 31, andDirectionAngle: self.zRotation)
+        let impulseAction = SKAction.applyImpulse(vector, duration: 0.35)
+        self.run(impulseAction, withKey: "skatingImpulse")
     }
     
     
@@ -200,6 +200,7 @@ open class UserPlayerNode: SKNode {
         self.physicsBody?.categoryBitMask = PhysicsCategory.player
         self.physicsBody?.contactTestBitMask = PhysicsCategory.none
         self.physicsBody?.contactTestBitMask = PhysicsCategory.rink | PhysicsCategory.puck
+        self.physicsBody?.friction = 0.7
     }
     
     fileprivate func rotateAction(toFacePoint point: CGPoint, withDuration duration: TimeInterval) -> SKAction {
@@ -265,7 +266,12 @@ public enum PlayerPosition: Int {
 
 fileprivate extension CGVector {
     init(withMagnitude magnitude: CGFloat, andDirectionAngle angle: CGFloat) {
-        self.dx = magnitude * cos(angle)
-        self.dy = magnitude * sin(angle)
+        var angle = angle
+        angle += (CGFloat.pi / 1.9)
+        if angle < 0 {
+            angle = (2 * CGFloat.pi) + angle
+        }
+        self.dx = (magnitude * cos(angle))
+        self.dy = (magnitude * sin(angle))
     }
 }
