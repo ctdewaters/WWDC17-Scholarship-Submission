@@ -25,6 +25,8 @@ open class Rink: SKScene, JoystickDelegate, SwitchPlayerButtonDelegate, SKPhysic
     open var topNet: NetNode?
     open var bottomNet: NetNode?
     
+    fileprivate var panGesture: UIPanGestureRecognizer!
+    
     fileprivate var latestJoystickData: JoystickData?
     
     //Returns the selected player on the user controlled team
@@ -85,7 +87,6 @@ open class Rink: SKScene, JoystickDelegate, SwitchPlayerButtonDelegate, SKPhysic
         
         self.backgroundColor = sceneBackgroundColor
         
-        
         //Adding the camera
         self.addChild(cameraNode)
         camera = cameraNode
@@ -97,6 +98,10 @@ open class Rink: SKScene, JoystickDelegate, SwitchPlayerButtonDelegate, SKPhysic
     
     open override func didMove(to view: SKView) {
         super.didMove(to: view)
+        
+        //Setting pan gesture recognizer
+        self.panGesture = UIPanGestureRecognizer(target: self, action: #selector(self.pan(_:)))
+        view.addGestureRecognizer(self.panGesture)
     }
     
     //Sets the physics body shape, gravity, and contact properties
@@ -349,6 +354,18 @@ open class Rink: SKScene, JoystickDelegate, SwitchPlayerButtonDelegate, SKPhysic
     public func buttonDidRecieveUserInput(switchPlayerButton button: SwitchPlayerButton) {
         
         self.selectPlayerClosestToPuck()
+    }
+    
+    //MARK: - Panning
+    func pan(_ sender: UIPanGestureRecognizer) {
+        if let selectedPlayer = selectedPlayer {
+            if sender.state == .changed {
+                selectedPlayer.pointee.playerNode.texture = PlayerTexture.texture(forTranslation: sender.translation(in: self.view!))
+            }
+            if sender.state == .ended {
+                selectedPlayer.pointee.playerNode.texture = PlayerTexture.faceoff
+            }
+        }
     }
 }
 

@@ -13,7 +13,6 @@ open class PlayerNode: SKSpriteNode {
     
     open var pSpeed: CGFloat = 10
     
-    open var skatingTextures: [SKTexture]?
     open var playerPosition: PlayerPosition!
     open var isOnOpposingTeam: Bool!
     open var hasPuck = false
@@ -33,7 +32,6 @@ open class PlayerNode: SKSpriteNode {
         //Load textures
         super.init(texture: nil, color: color, size: nodeSize)
         self.playerPosition = playerPosition
-        self.loadTextures()
         self.texture = faceoffTexture
         self.colorBlendFactor = 0.5
         
@@ -55,25 +53,11 @@ open class PlayerNode: SKSpriteNode {
         puck.removeAllActions()
         puck.removeFromParent()
         puck.physicsBody = nil
-        puck.position = CGPoint(x: -4, y: 17)
+        puck.position = CGPoint(x: -9, y: 17)
         self.addChild(puck)
         self.hasPuck = true
     }
-    
-    //Loading textures from resources
-    fileprivate func loadTextures() {
-        let f1 = SKTexture(imageNamed: "player1.png")
-        let f2 = SKTexture(imageNamed: "player2.png")
-        let f3 = SKTexture(imageNamed: "player3.png")
-        let f4 = SKTexture(imageNamed: "player4.png")
-        let f5 = SKTexture(imageNamed: "player5.png")
-        let f6 = SKTexture(imageNamed: "player6.png")
-        let f7 = SKTexture(imageNamed: "player7.png")
-        let f8 = SKTexture(imageNamed: "player8.png")
         
-        self.skatingTextures = [f1, f2, f3, f4, f5, f6, f7, f8, f7, f6, f5, f4, f3, f2, f1]
-    }
-    
     fileprivate func setPhysicsBody() {
         self.anchorPoint = CGPoint(x: 0.5, y: 0.5)
         let path = generatePath()
@@ -113,7 +97,7 @@ open class PlayerNode: SKSpriteNode {
     
     open func animateSkatingTextures() {
         print("RUNNING SKATING TEXTURES")
-        self.skatingAction = SKAction.repeatForever(SKAction.animate(with: self.skatingTextures!, timePerFrame: 0.05))
+        self.skatingAction = SKAction.repeatForever(SKAction.animate(with: PlayerTexture.skatingTextures, timePerFrame: 0.05))
         self.run(self.skatingAction!, withKey: "skatingAction")
         
         if let puck = puck {
