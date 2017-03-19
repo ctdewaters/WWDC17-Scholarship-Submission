@@ -8,11 +8,12 @@ public let rinkCenterCircleWidth: CGFloat = 155
 public let sceneBackgroundColor = UIColor(red:0.13, green:0.13, blue:0.13, alpha:1.0)
 
 public struct PhysicsCategory {
-    static let none      : UInt32 = 0
-    static let all       : UInt32 = UInt32.max
-    static let puck   : UInt32 = 0b1 // 1
+    static let none : UInt32 = 0
+    static let all : UInt32 = UInt32.max
+    static let puck : UInt32 = 0b1 // 1
     static let player: UInt32 = 0b10 // 2
     static let rink: UInt32 = 0b11 // 3
+    static let puckCarrier: UInt32 = 0b100 // 4
 }
 
 
@@ -30,7 +31,7 @@ open class Rink: SKScene, JoystickDelegate, SwitchPlayerButtonDelegate, SKPhysic
     fileprivate var latestJoystickData: JoystickData?
     
     //Returns the selected player on the user controlled team
-    fileprivate var selectedPlayer: UnsafeMutablePointer<UserPlayerNode>? {
+    open var selectedPlayer: UnsafeMutablePointer<UserPlayerNode>? {
         if let userTeam = userTeam {
             for player in userTeam {
                 if player.isSelected {
@@ -90,6 +91,7 @@ open class Rink: SKScene, JoystickDelegate, SwitchPlayerButtonDelegate, SKPhysic
         //Adding the camera
         self.addChild(cameraNode)
         camera = cameraNode
+        
     }
     
     required public init?(coder aDecoder: NSCoder) {
@@ -197,6 +199,16 @@ open class Rink: SKScene, JoystickDelegate, SwitchPlayerButtonDelegate, SKPhysic
     //Computes position to set player for a faceoff location
     fileprivate func position(forPlayer player: PlayerNode, atFaceoffLocation location: FaceoffLocation) -> CGPoint {
         return location.playerPosition(forPlayerNode: player)
+    }
+    
+    //Causes user controlled player to shoot the puck
+    @objc fileprivate func selectedPlayerShootPuck() {
+        if let selectedPlayer = selectedPlayer {
+            if selectedPlayer.pointee.hasPuck {
+                print("SHOOTING PUCK")
+                selectedPlayer.pointee.shootPuck(atPoint: topNet!.position)
+            }
+        }
     }
     
     //Selects the player closest to the puck, or passes it to the next closest player
@@ -344,7 +356,7 @@ open class Rink: SKScene, JoystickDelegate, SwitchPlayerButtonDelegate, SKPhysic
         
         if let selectedPlayer = selectedPlayer {
             selectedPlayer.pointee.playerNode.stopSkatingAction()
-            selectedPlayer.pointee.playerNode.texture = faceoffTexture
+            selectedPlayer.pointee.playerNode.texture = PlayerTexture.faceoff
             selectedPlayer.pointee.applySkatingImpulse()
         }
     }
@@ -359,11 +371,17 @@ open class Rink: SKScene, JoystickDelegate, SwitchPlayerButtonDelegate, SKPhysic
     //MARK: - Panning
     func pan(_ sender: UIPanGestureRecognizer) {
         if let selectedPlayer = selectedPlayer {
-            if sender.state == .changed {
-                selectedPlayer.pointee.playerNode.texture = PlayerTexture.texture(forTranslation: sender.translation(in: self.view!))
-            }
-            if sender.state == .ended {
-                selectedPlayer.pointee.playerNode.texture = PlayerTexture.faceoff
+            if selectedPlayer.pointee.hasPuck {
+                if sender.state == .changed {
+                    selectedPlayer.pointee.playerNode.texture = PlayerTexture.texture(forTranslation: sender.translation(in: self.view!))
+                    
+                    if sender.translation(in: self.view!).y < -75 {
+                        selectedPlayerShootPuck()
+                    }
+                }
+                if sender.state == .ended {
+                    selectedPlayer.pointee.playerNode.texture = PlayerTexture.faceoff
+                }
             }
         }
     }

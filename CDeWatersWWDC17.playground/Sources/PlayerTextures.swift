@@ -17,6 +17,14 @@ class PlayerTexture {
         return [f1, f2, f3, f4, f5, f6, f7, f8, f7, f6, f5, f4, f3, f2, f1]
     }
     
+    static let shoot1 = SKTexture(imageNamed: "shoot1.png")
+    static let shoot2 = SKTexture(imageNamed: "shoot2.png")
+    static let shoot3 = SKTexture(imageNamed: "shoot3.png")
+    
+    static var shootingTextures: [SKTexture] {
+        return [shoot1, shoot2, shoot3]
+    }
+
     static let boundSize: CGFloat = 100
     
     class func texture(forTranslation translation: CGPoint) -> SKTexture {
@@ -26,15 +34,22 @@ class PlayerTexture {
         let totalRange = boundSize * 2
         let sectorSize = totalRange / 5
         
-        var lowerBound: CGFloat = -boundSize
-        for i in -2..<3 {
-            let upperBound = lowerBound + sectorSize
-            
-            if translation.x >= lowerBound && translation.x <= upperBound {
-                return SKTexture(imageNamed: "playerPosition\(i).png")
+        let stickHandleUpperBound = (boundSize / 5)
+        let stickHandleLowerBound = -(boundSize / 5)
+        
+        
+        if translation.y > stickHandleLowerBound && translation.y < stickHandleUpperBound {
+            //Stick handling
+            var lowerBound: CGFloat = -boundSize
+            for i in -2..<3 {
+                let upperBound = lowerBound + sectorSize
+                
+                if translation.x >= lowerBound && translation.x <= upperBound {
+                    return SKTexture(imageNamed: "playerPosition\(i).png")
+                }
+                
+                lowerBound += sectorSize
             }
-            
-            lowerBound += sectorSize
         }
         return faceoff
     }
@@ -53,7 +68,12 @@ class PlayerTexture {
         else if point.y < -boundSize {
             point.y = -boundSize
         }
+        point.y = -point.y
         return point
     }
 
+}
+
+public extension Notification.Name {
+    public static let userShouldShootNotification = Notification.Name("userShouldShootNotification")
 }

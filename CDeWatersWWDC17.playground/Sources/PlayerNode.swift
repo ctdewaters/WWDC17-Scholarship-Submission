@@ -3,21 +3,26 @@ import SpriteKit
 public typealias Team = [PlayerNode]
 public typealias UserTeam = [UserPlayerNode]
 
-public let faceoffTexture = SKTexture(image: UIImage(named: "faceoffPosition.png")!)
 fileprivate let nodeSize = CGSize(width: 25, height: 50)
 
-open class PlayerNode: SKSpriteNode {
+protocol PlayerNodeDelegate {
+    func playerNodeDidPickUpPuck(_ node: PlayerNode)
+}
 
+open class PlayerNode: SKSpriteNode {
+    
     fileprivate var skatingAction: SKAction?
     fileprivate var selectionNode = SKShapeNode()
     
-    open var pSpeed: CGFloat = 10
+    open var pSpeed: CGFloat = 3
     
     open var playerPosition: PlayerPosition!
     open var isOnOpposingTeam: Bool!
     open var hasPuck = false
     
     open var rinkReference: UnsafeMutablePointer<Rink>?
+    
+    fileprivate var delegate: PlayerNodeDelegate?
     
     fileprivate var puck: PuckNode? {
         for child in children {
@@ -32,7 +37,7 @@ open class PlayerNode: SKSpriteNode {
         //Load textures
         super.init(texture: nil, color: color, size: nodeSize)
         self.playerPosition = playerPosition
-        self.texture = faceoffTexture
+        self.texture = PlayerTexture.faceoff
         self.colorBlendFactor = 0.5
         
         self.zPosition = 0
@@ -49,15 +54,16 @@ open class PlayerNode: SKSpriteNode {
     }
     
     public func pickUp(puck: inout PuckNode) {
-        print("Player picking up puck")
         puck.removeAllActions()
         puck.removeFromParent()
         puck.physicsBody = nil
         puck.position = CGPoint(x: -9, y: 17)
         self.addChild(puck)
         self.hasPuck = true
-    }
         
+        delegate?.playerNodeDidPickUpPuck(self)
+    }
+    
     fileprivate func setPhysicsBody() {
         self.anchorPoint = CGPoint(x: 0.5, y: 0.5)
         let path = generatePath()
@@ -68,15 +74,64 @@ open class PlayerNode: SKSpriteNode {
         self.physicsBody?.categoryBitMask = PhysicsCategory.player
         self.physicsBody?.collisionBitMask = PhysicsCategory.all
         self.physicsBody?.contactTestBitMask = PhysicsCategory.puck | PhysicsCategory.player
+        self.physicsBody?.affectedByGravity = false
     }
     
     fileprivate func generatePath() -> CGPath {
         
-        let rect = CGRect(x: self.frame.origin.x + 5, y: self.frame.origin.y + 5, width: self.frame.width - 10, height: self.frame.height - 25)
+        let rect = CGRect(x: self.frame.origin.x + 5, y: self.frame.origin.y + 5, width: self.frame.width - 10, height: self.frame.width - 10)
         let path = UIBezierPath(roundedRect: rect, cornerRadius: self.frame.width / 2)
         
         return path.cgPath
     }
+    
+    //Remove puck and add it to the rink at its current position
+    fileprivate func addPuckBackToRink() -> UnsafeMutablePointer<PuckNode> {
+        
+        //Convert position of puck in this node to the rink's coordinate system
+        let puckPosition = rinkReference?.pointee.convert((rinkReference?.pointee.puck?.position)!, from: self)
+        
+        let puck = rinkReference?.pointee.puck
+        puck?.removeFromParent()
+        puck?.position = puckPosition!
+        rinkReference?.pointee.addChild(puck!)
+        
+        self.hasPuck = false
+        
+        let ptr = UnsafeMutablePointer<PuckNode>.allocate(capacity: 1)
+        ptr.pointee = puck!
+        
+        return ptr
+    }
+    
+    fileprivate func movePuck(withForceMagnitude magnitude: CGFloat, toPoint point: CGPoint, withPreliminaryActions actions: [SKAction]? = nil) {
+        let puck = addPuckBackToRink()
+        
+        let action = SKAction.vectorAction(withPointA: point, andPointB: puck.pointee.position, withMagnitude: 10, andDuration: 0.35)
+        
+        var seqAction: SKAction!
+        if var actions = actions {
+            actions.append(action)
+            seqAction = SKAction.sequence(actions)
+        }
+        else {
+            seqAction = action
+        }
+        
+        puck.pointee.setPhysicsBody()
+        
+        puck.pointee.run(seqAction)
+        
+        let shootingAction = SKAction.animate(with: PlayerTexture.shootingTextures, timePerFrame: 0.1, resize: false, restore: true)
+        self.run(shootingAction)
+        
+        Timer.scheduledTimer(withTimeInterval: 0.35, repeats: false, block: {
+            timer in
+            self.physicsBody?.categoryBitMask = PhysicsCategory.player
+            self.physicsBody?.collisionBitMask = PhysicsCategory.all
+        })
+    }
+    
     
     open func applySkatingForce(usingPoint point: CGPoint) {
         self.rotate(toFacePoint: point, withDuration: 0.25)
@@ -96,7 +151,6 @@ open class PlayerNode: SKSpriteNode {
     }
     
     open func animateSkatingTextures() {
-        print("RUNNING SKATING TEXTURES")
         self.skatingAction = SKAction.repeatForever(SKAction.animate(with: PlayerTexture.skatingTextures, timePerFrame: 0.05))
         self.run(self.skatingAction!, withKey: "skatingAction")
         
@@ -118,7 +172,7 @@ open class PlayerNode: SKSpriteNode {
     
 }
 
-open class UserPlayerNode: SKNode {
+open class UserPlayerNode: SKNode, PlayerNodeDelegate {
     var playerNode: PlayerNode!
     var selectionNode = SKShapeNode()
     
@@ -140,6 +194,26 @@ open class UserPlayerNode: SKNode {
         return CGPoint(x: startPoint.x + xDiff, y: startPoint.y + yDiff)
     }
     
+    fileprivate var facingNorth: Bool {
+        let rotation = self.zRotation + (CGFloat.pi / 2)
+        
+        if rotation < 0 || rotation > CGFloat.pi {
+            return false
+        }
+        return true
+    }
+    
+    fileprivate var shootingPoint: CGPoint {
+        let startPoint = self.position // center of node
+        let angle = self.zRotation
+        let length = self.frame.height * 2
+        
+        let xDiff = length * cos(angle)
+        let yDiff = length * cos(angle)
+        
+        return CGPoint(x: startPoint.x + xDiff, y: startPoint.y + yDiff)
+    }
+    
     fileprivate var rinkReference: UnsafeMutablePointer<Rink>? {
         return self.playerNode.rinkReference
     }
@@ -148,6 +222,7 @@ open class UserPlayerNode: SKNode {
         super.init()
         self.playerNode = PlayerNode(withColor: color, rinkReference: rinkReference, andPosition: playerPosition)
         self.playerNode.zPosition = 1
+        self.playerNode.delegate = self
         self.addChild(playerNode)
         self.playerNode.physicsBody = nil
         self.setPhysicsBody()
@@ -172,7 +247,6 @@ open class UserPlayerNode: SKNode {
     }
     
     open func applySkatingImpulse() {
-        
         //Remove previous physics
         self.physicsBody = nil
         self.setPhysicsBody()
@@ -198,6 +272,7 @@ open class UserPlayerNode: SKNode {
     open func deselect() {
         self.isSelected = false
         self.selectionNode.removeFromParent()
+        self.playerNode.stopSkatingAction()
     }
     
     open func rotate(toFacePoint point: CGPoint, withDuration duration: TimeInterval) {
@@ -205,18 +280,21 @@ open class UserPlayerNode: SKNode {
     }
     
     open func passPuck(toPlayer player: UserPlayerNode) {
-        let puck = rinkReference?.pointee.puck
-        puck?.removeFromParent()
-        puck?.position = self.frontPoint
-        rinkReference?.pointee.addChild(puck!)
-        
-        self.playerNode.hasPuck = false
-        puck?.run(SKAction.move(to: player.frontPoint, duration: 0.7))
-        
-        Timer.scheduledTimer(withTimeInterval: 0.1, repeats: false, block: {
-            timer in
-            puck?.setPhysicsBody()
-        })
+        self.playerNode.movePuck(withForceMagnitude: 2, toPoint: player.frontPoint)
+    }
+    
+    open func shootPuck(atPoint point: CGPoint) {
+        print(facingNorth)
+        if !facingNorth {
+            let rotateAction = self.rotateAction(toFacePoint: point, withDuration: 0.22)
+            self.run(rotateAction, completion: {
+                self.removeAllActions()
+                self.playerNode.movePuck(withForceMagnitude: 10, toPoint: point)
+            })
+        }
+        else {
+            self.playerNode.movePuck(withForceMagnitude: 10, toPoint: point)
+        }
     }
     
     fileprivate func setPhysicsBody() {
@@ -226,9 +304,9 @@ open class UserPlayerNode: SKNode {
         self.physicsBody?.isDynamic = true
         self.physicsBody?.mass = 1
         self.physicsBody?.categoryBitMask = PhysicsCategory.player
-        self.physicsBody?.contactTestBitMask = PhysicsCategory.none
         self.physicsBody?.contactTestBitMask = PhysicsCategory.rink | PhysicsCategory.puck
         self.physicsBody?.friction = 0.7
+        self.physicsBody?.affectedByGravity = false
     }
     
     fileprivate func rotateAction(toFacePoint point: CGPoint, withDuration duration: TimeInterval) -> SKAction {
@@ -237,7 +315,7 @@ open class UserPlayerNode: SKNode {
         
         let angle = atan2(yDiff, xDiff) + (90 / 180 * CGFloat.pi)
         
-        return SKAction.rotate(toAngle: angle, duration: duration)
+        return SKAction.rotate(toAngle: angle, duration: duration, shortestUnitArc: true)
     }
     
     fileprivate func rotateAction(toAngle angle: CGFloat) -> SKAction {
@@ -252,7 +330,21 @@ open class UserPlayerNode: SKNode {
         
         return sqrt(pow(xDiff, 2) + pow(yDiff, 2))
     }
-
+    
+    //MARK: - PlayerNodeDelegate
+    
+    func playerNodeDidPickUpPuck(_ node: PlayerNode) {
+        self.physicsBody?.categoryBitMask = PhysicsCategory.puckCarrier
+        self.physicsBody?.collisionBitMask = PhysicsCategory.rink
+        
+        //Selecting player
+        if self.isSelected == false {
+            //Player is not selected, deselect currently selected player, and select this player
+            self.rinkReference?.pointee.selectedPlayer?.pointee.deselect()
+            self.select()
+        }
+    }
+    
 }
 
 public enum TeamSize {
@@ -303,3 +395,18 @@ fileprivate extension CGVector {
         self.dy = (magnitude * sin(angle))
     }
 }
+
+public extension SKAction {
+    class func vectorAction(withPointA a: CGPoint, andPointB b: CGPoint, withMagnitude magnitude: CGFloat, andDuration duration: TimeInterval) -> SKAction {
+        let origin = CGPoint(x: b.x - a.x, y: b.y - a.y)
+        let angle = -atan2(origin.y, origin.x)
+        
+        let dx = magnitude * cos(angle)
+        let dy = magnitude * sin(angle)
+        
+        let vector = CGVector(dx: -dx, dy: dy)
+        
+        return SKAction.applyImpulse(vector, duration: 0.35)
+    }
+}
+

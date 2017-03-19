@@ -21,7 +21,7 @@ open class PuckNode: SKShapeNode {
         self.physicsBody?.mass = 0.01
         self.physicsBody?.allowsRotation = false
         self.physicsBody?.categoryBitMask = PhysicsCategory.puck
-        self.physicsBody?.collisionBitMask = PhysicsCategory.all
+        self.physicsBody?.collisionBitMask = PhysicsCategory.rink | PhysicsCategory.player
         self.physicsBody?.contactTestBitMask = PhysicsCategory.rink | PhysicsCategory.player
         self.physicsBody?.usesPreciseCollisionDetection = true
     }
