@@ -1,6 +1,10 @@
 import SpriteKit
 
-class PlayerTexture {
+public class PlayerTexture {
+    
+    //MARK: - Textures
+    
+    //The Faceoff texture
     static let faceoff = SKTexture(imageNamed: "faceoffPosition.png")
     
     //Skating textures
@@ -12,24 +16,32 @@ class PlayerTexture {
     static let f6 = SKTexture(imageNamed: "player6.png")
     static let f7 = SKTexture(imageNamed: "player7.png")
     static let f8 = SKTexture(imageNamed: "player8.png")
+    static let skatingTextures: [SKTexture] = [f1, f2, f3, f4, f5, f6, f7, f8, f7, f6, f5, f4, f3, f2, f1]
     
-    static var skatingTextures: [SKTexture] {
-        return [f1, f2, f3, f4, f5, f6, f7, f8, f7, f6, f5, f4, f3, f2, f1]
-    }
-    
+    //Shooting textures
     static let shoot1 = SKTexture(imageNamed: "shoot1.png")
     static let shoot2 = SKTexture(imageNamed: "shoot2.png")
     static let shoot3 = SKTexture(imageNamed: "shoot3.png")
+    static let shootingTextures: [SKTexture] = [shoot1, shoot2, shoot3]
     
-    static var shootingTextures: [SKTexture] {
-        return [shoot1, shoot2, shoot3]
-    }
-
+    //Deking textures
+    static let dekeNeg2 = SKTexture(imageNamed: "playerPosition-2.png")
+    static let dekeNeg1 = SKTexture(imageNamed: "playerPosition-1.png")
+    static let deke0 = SKTexture(imageNamed: "playerPosition0.png")
+    static let deke1 = SKTexture(imageNamed: "playerPosition1.png")
+    static let deke2 = SKTexture(imageNamed: "playerPosition2.png")
+    
+    static let dekeLeftTextures = [deke0, dekeNeg1, dekeNeg2]
+    static let dekeRightTextures = [deke0, deke1, deke2]
+    
     static let boundSize: CGFloat = 100
     
-    class func texture(forTranslation translation: CGPoint) -> SKTexture {
+    
+    //MARK: - Functions
+    
+    //Finds correct texture for deking (UIPanGestureRecognizer translation)
+    public class func texture(forTranslation translation: CGPoint) -> SKTexture {
         let translation = self.bound(translationPoint: translation)
-        print(translation.x)
         
         let totalRange = boundSize * 2
         let sectorSize = totalRange / 5
@@ -45,12 +57,13 @@ class PlayerTexture {
                 let upperBound = lowerBound + sectorSize
                 
                 if translation.x >= lowerBound && translation.x <= upperBound {
-                    return SKTexture(imageNamed: "playerPosition\(i).png")
+                    return SKTexture(imageNamed: "playerPosition\(i)")
                 }
                 
                 lowerBound += sectorSize
             }
         }
+        
         return faceoff
     }
     
