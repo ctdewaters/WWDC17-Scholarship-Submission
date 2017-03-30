@@ -11,9 +11,8 @@ import GameplayKit
 
 public class MoveComponent: GKAgent2D, GKAgentDelegate {
     
-    var mBehavior: MoveBehavior!
     
-    public init(maxSpeed: Float, maxAcceleration: Float, radius: Float, mass: Float, withBehavior behavior: MoveBehavior) {
+    public init(maxSpeed: Float, maxAcceleration: Float, radius: Float, mass: Float, withBehaviorType type: BehaviorType) {
         super.init()
         
         self.delegate = self
@@ -22,13 +21,25 @@ public class MoveComponent: GKAgent2D, GKAgentDelegate {
         self.maxAcceleration = maxAcceleration
         self.radius = radius
         self.mass = mass
-        
-        self.behavior = behavior
+
+        self.behavior = GKBehavior(goals: type.goals, andWeights: type.weights)
     }
     
     required public init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
+    
+    public func update(withBehaviorType type: BehaviorType) {
+        Swift.print("Updated behavior with type \(type)")
+        self.behavior?.removeAllGoals()
+        for i in 0..<type.goals.count {
+            let goal = type.goals[i]
+            let weight = type.weights[i]
+            self.behavior?.setWeight(Float(weight), for: goal)
+        }
+    }
+    
+    //MARK: - GKAgentDelegate
     
     public func agentWillUpdate(_ agent: GKAgent) {
         guard let playerComponent = playerComponent else {
@@ -36,7 +47,7 @@ public class MoveComponent: GKAgent2D, GKAgentDelegate {
         }
         
         position = float2(withCGPoint: playerComponent.node.position)
-        rotation = Float(playerComponent.node.zRotation)
+        //rotation = Float(playerComponent.node.zRotation - (CGFloat.pi / 2))
     }
     
     public func agentDidUpdate(_ agent: GKAgent) {
@@ -44,12 +55,13 @@ public class MoveComponent: GKAgent2D, GKAgentDelegate {
             return
         }
         
-        playerComponent.node.physicsBody?.velocity = CGVector(dx: CGFloat(self.velocity.x), dy: CGFloat(self.velocity.y))
-        playerComponent.node.zRotation = CGFloat(self.rotation)
-    }
-    
-    public override func update(deltaTime seconds: TimeInterval) {
-        super.update(deltaTime: seconds)
+        let velocityVector = CGVector(dx: CGFloat(self.velocity.x), dy: CGFloat(self.velocity.y))
+        
+        playerComponent.node.physicsBody?.velocity = velocityVector
+
+        let facePoint = CGPoint(x: playerComponent.node.position.x + CGFloat(self.velocity.x), y: playerComponent.node.position.y + CGFloat(self.velocity.y))
+        let faceAction = SKAction.rotateAction(toFacePoint: facePoint, currentPoint: playerComponent.node.position, withDuration: 0.1)
+        playerComponent.node.run(faceAction)
     }
     
     //MARK: - Movement functions
@@ -65,18 +77,6 @@ public class MoveComponent: GKAgent2D, GKAgentDelegate {
     fileprivate var playerComponent: PlayerComponent? {
         return self.player?.playerComponent
     }
-    
-    var moveBehavior: MoveBehavior {
-        set {
-            self.behavior = newValue
-        }
-        get {
-            return self.behavior as! MoveBehavior
-        }
-    }
-
-
-
 }
 
 public extension CGPoint {
@@ -95,5 +95,11 @@ public extension float2 {
 public extension GKAgent2D {
     var cgPosition: CGPoint {
         return CGPoint(x: self.position.x, y: self.position.y)
+    }
+}
+
+public extension CGVector {
+    var magnitude: CGFloat {
+        return atan2(self.dy, self.dx)
     }
 }

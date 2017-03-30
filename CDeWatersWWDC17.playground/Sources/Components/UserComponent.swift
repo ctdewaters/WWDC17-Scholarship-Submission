@@ -10,7 +10,7 @@ import GameplayKit
 import SpriteKit
 import Cocoa
 
-public class UserComponent: GKComponent, ControlKeyDelegate {
+public class UserComponent: GKAgent2D, GKAgentDelegate, ControlKeyDelegate {
     
     public static let shared = UserComponent()
     
@@ -18,6 +18,7 @@ public class UserComponent: GKComponent, ControlKeyDelegate {
     
     public override func didAddToEntity() {
         super.didAddToEntity()
+        self.delegate = self
         self.playerComponent?.select()
     }
     
@@ -84,6 +85,15 @@ public class UserComponent: GKComponent, ControlKeyDelegate {
         if let player = self.player {
             player.playerComponent?.move(withControlKeys: self.activeMovementKeys)
         }
+    }
+    
+    //MARK: - GKAgentDelegate
+    public func agentWillUpdate(_ agent: GKAgent) {
+        self.position = float2(withCGPoint: self.player!.node!.position)
+    }
+    
+    public func agentDidUpdate(_ agent: GKAgent) {
+        
     }
     
     //MARK: - Calculated variables

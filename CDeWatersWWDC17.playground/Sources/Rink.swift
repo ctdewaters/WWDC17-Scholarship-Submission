@@ -23,7 +23,7 @@ public typealias Team = [Player]
 public var userTeam: Team?
 public var opposingTeam: Team?
 
-public class Rink: SKScene, SKPhysicsContactDelegate {
+public class Rink: SKScene, SKPhysicsContactDelegate, PlayerDelegate {
     
     open var entities = Set<GKEntity>()
     open var entitiesToRemove = Set<GKEntity>()
@@ -52,7 +52,7 @@ public class Rink: SKScene, SKPhysicsContactDelegate {
     }
     
     //Returns the player on either team that is currently carrying the puck
-    fileprivate var puckCarrier: Player? {
+    public var puckCarrier: Player? {
         if let userTeam = userTeam {
             for player in userTeam {
                 if player.hasPuck {
@@ -318,6 +318,7 @@ public class Rink: SKScene, SKPhysicsContactDelegate {
         userTeam?.moveComponentSystem.update(deltaTime: deltaTime)
         opposingTeam?.moveComponentSystem.update(deltaTime: deltaTime)
         UserComponent.shared.update(deltaTime: deltaTime)
+        Puck.shared.update(deltaTime: deltaTime)
     
         //Follow puck location
         updateCameraPosition()
@@ -402,6 +403,22 @@ public class Rink: SKScene, SKPhysicsContactDelegate {
 //        }
     }
     
+    //MARK: - PlayerDelegate
+    public func playerDidPickUpPuck(_ player: Player) {
+        if !player.isOnOpposingTeam {
+            userTeam?.updateBehaviorToOffense()
+            opposingTeam?.updateBehaviorToDefense()
+        }
+        else {
+            userTeam?.updateBehaviorToDefense()
+            opposingTeam?.updateBehaviorToOffense()
+        }
+    }
+    
+    public func playerDidReleasePuck(_ player: Player) {
+        userTeam!.chasePuck()
+        opposingTeam!.chasePuck()
+    }
 }
 
 //Pair of SKPhysicsBodies

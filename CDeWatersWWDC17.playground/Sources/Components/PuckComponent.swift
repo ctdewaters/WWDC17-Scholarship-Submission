@@ -11,7 +11,7 @@ import SpriteKit
 
 public let puckDiameter: CGFloat = 4
 
-public class PuckComponent: GKAgent2D {
+public class PuckComponent: GKAgent2D, GKAgentDelegate {
     
     public var node: SKShapeNode!
     
@@ -27,6 +27,8 @@ public class PuckComponent: GKAgent2D {
         node.zPosition = 0
         
         setPhysicsBody()
+        
+        self.delegate = self
 
     }
     
@@ -40,6 +42,16 @@ public class PuckComponent: GKAgent2D {
         node.physicsBody?.usesPreciseCollisionDetection = true
         node.physicsBody?.affectedByGravity = false
         node.physicsBody?.restitution = 0
+    }
+    
+    //MARK: - GKAgentDelegate
+    
+    public func agentWillUpdate(_ agent: GKAgent) {
+        self.position = float2(withCGPoint: self.node.position)
+    }
+    
+    public func agentDidUpdate(_ agent: GKAgent) {
+        
     }
 
     
