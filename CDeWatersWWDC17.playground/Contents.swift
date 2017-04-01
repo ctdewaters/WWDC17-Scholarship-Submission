@@ -1,5 +1,3 @@
-//: Playground - noun: a place where people can play
-
 import Cocoa
 import PlaygroundSupport
 import SpriteKit
@@ -11,5 +9,10 @@ skView.showsPhysics = false
 
 Rink.shared.scaleMode = .aspectFill
 skView.presentScene(Rink.shared)
+
+//Adding the scoreboard
+Scoreboard.shared = Scoreboard(frame: NSRect(x: 20, y: skView.frame.maxY - 50, width: 250, height: 30))
+skView.addSubview(Scoreboard.shared)
+
 
 PlaygroundPage.current.liveView = skView

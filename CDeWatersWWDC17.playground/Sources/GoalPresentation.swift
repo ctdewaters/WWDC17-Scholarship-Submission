@@ -19,6 +19,8 @@ class GoalPresentation: NSObject {
     
     fileprivate var dismissTimer: Timer!
     
+    public var isPresented = false
+    
     override init() {
         super.init()
     }
@@ -26,7 +28,8 @@ class GoalPresentation: NSObject {
     open func present(toView view: NSView, withCompletion completion: (()->Void)? = nil) {
         if self.presentationView == nil {
             self.presentationView = NSView(frame: NSRect(x: 0, y: 0, width: view.frame.width, height: view.frame.height))
-            self.presentationView.layer?.backgroundColor = NSColor.black.withAlphaComponent(0.7).cgColor
+            self.presentationView.wantsLayer = true
+            self.presentationView.layer?.backgroundColor = NSColor.black.withAlphaComponent(0.4).cgColor
             self.presentationView.alphaValue = 0
             
             goalLabel = NSTextField(labelWithString: "GOAL!!!")
@@ -43,44 +46,51 @@ class GoalPresentation: NSObject {
             promptLabel.textColor = NSColor.black.withAlphaComponent(0.7)
             self.presentationView.addSubview(promptLabel)
             
-            view.addSubview(self.presentationView)
+            view.addSubview(self.presentationView, positioned: .below, relativeTo: Scoreboard.shared)
             
-            self.animateGoalLabel()
-            
+            self.animateScoreboard(toPoint: CGPoint(x: (view.frame.width / 2) - (Scoreboard.shared.frame.width * 0.75), y: view.frame.maxY - 80))
+                        
             //SoundEffectPlayer.player.play(soundEffect: .puckHitBoards, indefinitely: true)
             
             self.presentationView.fadeIn(withDuration: 0.5, andCompletionBlock: completion)
+            
+            self.isPresented = true
             
             self.dismissTimer = Timer.scheduledTimer(timeInterval: 5, target: self, selector: #selector(dismissPresentationView), userInfo: nil, repeats: false)
         }
     }
     
-    fileprivate func animateGoalLabel() {
-//        let pulseAnim = CABasicAnimation(keyPath: "transform.scale")
-//        pulseAnim.duration = 0.4
-//        pulseAnim.toValue = NSNumber(value: 0.5)
-//        pulseAnim.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionEaseInEaseOut)
-//        pulseAnim.autoreverses = true
-//        pulseAnim.repeatCount = .greatestFiniteMagnitude
-//        self.goalLabel.layer.add(pulseAnim, forKey: "pulsingAnimation")
-//        
-//        let rotateAnim = CABasicAnimation(keyPath: "transform.rotation.z")
-//        rotateAnim.duration = 0.8
-//        rotateAnim.fromValue = NSNumber(value: (7 * Float.pi / 6) + (Float.pi / 2))
-//        rotateAnim.toValue = NSNumber(value: (11 * Float.pi / 6) + (Float.pi / 2))
-//        rotateAnim.autoreverses = true
-//        rotateAnim.repeatCount = .greatestFiniteMagnitude
-//        rotateAnim.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionEaseInEaseOut)
-//        self.goalLabel.layer.add(rotateAnim, forKey: "rotatingAnimation")
+    fileprivate func animateScoreboard(toPoint point: CGPoint) {
+        NSAnimationContext.runAnimationGroup({
+            context in
+            context.duration = 0.3
+            Scoreboard.shared.animator().frame.origin = point
+            Scoreboard.shared.animator().layer?.setAffineTransform(CGAffineTransform(scaleX: 1.5, y: 1.5))
+        }, completionHandler: nil)
     }
     
-    @objc fileprivate func dismissPresentationView() {
+    fileprivate func returnScoreboard() {
+        NSAnimationContext.runAnimationGroup({
+            context in
+            context.duration = 0.3
+            let superview = Scoreboard.shared.superview!
+            Scoreboard.shared.animator().frame.origin = CGPoint(x: 20, y: superview.frame.maxY - 50)
+            Scoreboard.shared.animator().layer?.setAffineTransform(CGAffineTransform(scaleX: 1, y: 1))
+        }, completionHandler: nil)
+    }
+    
+    @objc public func dismissPresentationView() {
         if dismissTimer != nil {
            self.dismissTimer.invalidate()
         }
         
+        self.returnScoreboard()
+        self.isPresented = false
+        
         self.presentationView.fadeOut(withDuration: 0.3, andCompletionBlock: {
             //SoundEffectPlayer.player.stop()
+            
+            NotificationCenter.default.post(name: .didReturnToPlay, object: nil)
             self.dismissTimer = nil
             self.presentationView.removeFromSuperview()
             for view in self.presentationView.subviews {
@@ -97,6 +107,14 @@ class GoalPresentation: NSObject {
 }
 
 public extension NSView {
+    var center: CGPoint {
+        set {
+            self.frame.origin = CGPoint(x: newValue.x - (self.bounds.width / 2), y: newValue.y - (self.bounds.height / 2))
+        }
+        get {
+            return CGPoint(x: self.frame.origin.x + (self.bounds.width / 2), y: self.frame.origin.y + (self.bounds.height / 2))
+        }
+    }
     func fadeIn(withDuration duration: TimeInterval, andCompletionBlock completion: (()->Void)? = nil) {
         self.wantsLayer = true
         NSAnimationContext.runAnimationGroup({

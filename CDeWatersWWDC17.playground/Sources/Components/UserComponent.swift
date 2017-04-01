@@ -33,6 +33,10 @@ public class UserComponent: GKAgent2D, GKAgentDelegate, ControlKeyDelegate {
     ///Received input from the keyboard.
     public func didRecieveKeyInput(withControlKey controlKey: ControlKey) {
         
+        if GoalPresentation.shared.isPresented {
+            GoalPresentation.shared.dismissPresentationView()
+        }
+        
         if !activeMovementKeys.contains(controlKey) && controlKey.isMovementKey {
             //Key not currently activated, and is a movement key
             

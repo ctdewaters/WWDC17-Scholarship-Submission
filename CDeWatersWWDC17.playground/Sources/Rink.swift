@@ -111,6 +111,10 @@ public class Rink: SKScene, SKPhysicsContactDelegate, PlayerDelegate {
         Puck.shared.position = FaceoffLocation.centerIce.coordinate
         self.positionPlayers(atFaceoffLocation: .centerIce, withDuration: 1.5) {
             self.selectPlayerClosestToPuck()
+            
+            //Start the play clock
+            Scoreboard.shared.startTimer()
+            
             for player in userTeam! {
                 if !player.isSelected {
                     player.addMovement()
@@ -319,18 +323,23 @@ public class Rink: SKScene, SKPhysicsContactDelegate, PlayerDelegate {
         
         if let puckInNet = puckInNet {
             //Goal scored
-            if puckInNet == Net.topNet {
-                GoalPresentation.shared.present(toView: self.view!, withCompletion: {
-                    Puck.shared.node.removeAllActions()
-                    Puck.shared.node.physicsBody = nil
-                    Puck.shared.puckComponent.setPhysicsBody()
-                    Puck.shared.node.position = FaceoffLocation.centerIce.coordinate
-                    self.positionPlayers(atFaceoffLocation: .centerIce, withDuration: 1.5)
-                })
-            }
-            else {
-                Swift.print("Goal in bottom net!")
-            }
+
+            //Present the goal presentation view
+            GoalPresentation.shared.present(toView: self.view!, withCompletion: {
+                //Update the score
+                if puckInNet == Net.topNet {
+                    Score.shared.score(forUserTeam: true)
+                }
+                else {
+                    Score.shared.score(forUserTeam: false)
+                }
+                
+                Puck.shared.node.removeAllActions()
+                Puck.shared.node.physicsBody = nil
+                Puck.shared.puckComponent.setPhysicsBody()
+                Puck.shared.node.position = FaceoffLocation.centerIce.coordinate
+                self.positionPlayers(atFaceoffLocation: .centerIce, withDuration: 3)
+            })
         }
         
         userTeam?.moveComponentSystem.update(deltaTime: deltaTime)

@@ -18,9 +18,11 @@ public class Score: NSObject {
     public func score(forUserTeam userGoal: Bool) {
         if userGoal {
             self.userScore += 1
+            NotificationCenter.default.post(name: .userTeamGoalScored, object: nil)
         }
         else {
             self.cpuScore += 1
+            NotificationCenter.default.post(name: .opposingTeamGoalScored, object: nil)
         }
     }
     
