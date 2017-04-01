@@ -33,9 +33,9 @@ public enum BehaviorType: String {
         case .chasePuck, .attackPuckCarrier, .wander :
             return [1]
         case .defendGoal :
-            return [0.3, 0.3, 0.8]
+            return [0.3, 0.3, 0.8, 1]
         case .supportPuckCarrier :
-            return [0.4, 0.7, 1]
+            return [0.4, 0.7, 1, 1]
         }
     }
     
@@ -48,17 +48,19 @@ public enum BehaviorType: String {
         let defendGoal = GKGoal(toSeekAgent: (userTeam?.hasPuck)! ? Net.topNet.netComponent : Net.bottomNet.netComponent)
         let playerToAlignWith = Rink.shared.puckCarrier!.agent
         let alignWithPuckCarrierGoal = GKGoal(toAlignWith: [playerToAlignWith], maxDistance: 1500, maxAngle: Float.pi / 2)
+        let spreadOut = GKGoal(toAvoid: userTeam!.hasPuck ? opposingTeam!.agents : userTeam!.agents, maxPredictionTime: 0.5)
         let attackGoal = GKGoal(toSeekAgent: playerToAlignWith)
         
-        return [defendGoal, attackGoal, alignWithPuckCarrierGoal]
+        return [defendGoal, attackGoal, alignWithPuckCarrierGoal, spreadOut]
     }
     
     private var supportPuckCarrierGoals: [GKGoal] {
         let puckCarrier = Rink.shared.puckCarrier!.agent
         let aidPuckCarrier = GKGoal(toAlignWith: [puckCarrier], maxDistance: 1000, maxAngle: Float.pi)
         let moveUpWithPuckCarrier = GKGoal(toSeekAgent: puckCarrier)
+        let spreadOut = GKGoal(toAvoid: userTeam!.hasPuck ? userTeam!.agents : opposingTeam!.agents, maxPredictionTime: 0.5)
         let avoidOtherTeam = GKGoal(toAvoid: Rink.shared.puckCarrier!.oppositeTeam.agents, maxPredictionTime: 0.2)
-        return [aidPuckCarrier, moveUpWithPuckCarrier, avoidOtherTeam]
+        return [aidPuckCarrier, moveUpWithPuckCarrier, avoidOtherTeam, spreadOut]
     }
     
     private var attackPuckCarrierGoals: [GKGoal] {

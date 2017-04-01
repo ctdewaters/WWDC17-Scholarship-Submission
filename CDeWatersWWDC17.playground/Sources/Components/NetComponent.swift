@@ -19,7 +19,7 @@ public class NetComponent: GKAgent2D, GKAgentDelegate {
     public init(atRinkEnd rinkEnd: RinkEnd) {
         super.init()
         
-        self.node = SKSpriteNode(texture: SKTexture(imageNamed: "netTexture"), color: SKColor.clear, size: CGSize(width: netWidth, height: netDepth))
+        self.node = SKSpriteNode(texture: SKTexture(imageNamed: "Textures/netTexture.png"), color: SKColor.clear, size: CGSize(width: netWidth, height: netDepth))
         node.position = rinkEnd.point
         node.anchorPoint = CGPoint(x: 0.5, y: 0.5)
         self.setPhysicsBody()
@@ -48,7 +48,7 @@ public class NetComponent: GKAgent2D, GKAgentDelegate {
         let backSize = CGSize(width: self.node.frame.width, height: 3)
         
         let post1 = SKPhysicsBody(rectangleOf: postSize, center: CGPoint(x: self.node.frame.minX, y: 0))
-        let post2 = SKPhysicsBody(rectangleOf: postSize, center: CGPoint(x: self.node.frame.maxX, y: 0))
+        let post2 = SKPhysicsBody(rectangleOf: postSize, center: CGPoint(x: self.node.frame.maxX - postSize.width, y: 0))
         let back = SKPhysicsBody(rectangleOf: backSize, center: CGPoint(x: 0, y: -10))
         
         node.physicsBody = SKPhysicsBody(bodies: [post1, post2, back])

@@ -8,75 +8,54 @@
 
 import Cocoa
 
-//class GoalPresentation: NSObject {
-//    
-//    static let shared = GoalPresentation()
-//    
-//    fileprivate var presentationView: UIView!
-//    fileprivate var goalLabel: UILabel!
-//    fileprivate var scoreLabel: UILabel!
-//    fileprivate var promptLabel: UILabel!
-//    
-//    fileprivate var dismissTimer: Timer!
-//    fileprivate var dismissTapGesture: UITapGestureRecognizer!
-//    
-//    override init() {
-//        super.init()
-//    }
-//    
-//    open func present(toView view: UIView, withCompletion completion: (()->Void)? = nil) {
-//        if self.presentationView == nil {
-//            self.presentationView = UIView(frame: CGRect(x: 0, y: 0, width: view.frame.width, height: view.frame.height))
-//            self.presentationView.backgroundColor = UIColor.black.withAlphaComponent(0.7)
-//            self.presentationView.alpha = 0
-//            
-//            goalLabel = UILabel(frame: CGRect(x: 0, y: 0, width: presentationView.frame.width, height: 100))
-//            goalLabel.center = CGPoint(x: presentationView.frame.width / 2, y: presentationView.frame.height / 2)
-//            goalLabel.text = "GOAL!!!"
-//            goalLabel.textColor = .red
-//            goalLabel.font = UIFont.systemFont(ofSize: 90, weight: UIFontWeightBlack)
-//            goalLabel.alpha = 0
-//            goalLabel.textAlignment = .center
-//            self.presentationView.addSubview(goalLabel)
-//            
-//            promptLabel = UILabel(frame: CGRect(x: 0, y: presentationView.frame.maxY - 30, width: presentationView.frame.width, height: 30))
-//            promptLabel.font = UIFont.systemFont(ofSize: 15, weight: UIFontWeightBold)
-//            promptLabel.textAlignment = .center
-//            promptLabel.textColor = UIColor.black.withAlphaComponent(0.7)
-//            promptLabel.alpha = 0
-//            promptLabel.text = "Tap the screen to skip."
-//            self.presentationView.addSubview(promptLabel)
-//            
-//            //Adding the dismiss tap gesture
-//            dismissTapGesture = UITapGestureRecognizer(target: self, action: #selector(dismissPresentationView))
-//            self.presentationView.addGestureRecognizer(dismissTapGesture)
-//            
-//            view.addSubview(self.presentationView)
-//            
-//            self.animateGoalLabel()
-//            
-//            SoundEffectPlayer.player.play(soundEffect: .puckHitBoards, indefinitely: true)
-//            
-//            UIView.animate(withDuration: 0.5, delay: 0, options: .curveEaseInOut, animations: {
-//                self.presentationView.alpha = 1
-//                self.goalLabel.alpha = 1
-//                self.promptLabel.alpha = 1
-//            }, completion: {
-//                completed in
-//                if completed {
-//                    if let completion = completion {
-//                        DispatchQueue.main.async {
-//                            completion()
-//                        }
-//                    }
-//                }
-//            })
-//            
-//            self.dismissTimer = Timer.scheduledTimer(timeInterval: 5, target: self, selector: #selector(dismissPresentationView), userInfo: nil, repeats: false)
-//        }
-//    }
-//    
-//    fileprivate func animateGoalLabel() {
+class GoalPresentation: NSObject {
+    
+    static let shared = GoalPresentation()
+    
+    fileprivate var presentationView: NSView!
+    fileprivate var goalLabel: NSTextField!
+    fileprivate var scoreLabel: NSTextField!
+    fileprivate var promptLabel: NSTextField!
+    
+    fileprivate var dismissTimer: Timer!
+    
+    override init() {
+        super.init()
+    }
+    
+    open func present(toView view: NSView, withCompletion completion: (()->Void)? = nil) {
+        if self.presentationView == nil {
+            self.presentationView = NSView(frame: NSRect(x: 0, y: 0, width: view.frame.width, height: view.frame.height))
+            self.presentationView.layer?.backgroundColor = NSColor.black.withAlphaComponent(0.7).cgColor
+            self.presentationView.alphaValue = 0
+            
+            goalLabel = NSTextField(labelWithString: "GOAL!!!")
+            goalLabel.frame = NSRect(x: 0, y: (view.frame.height / 2) + 50, width: presentationView.frame.width, height: 100)
+            goalLabel.textColor = .red
+            goalLabel.font = NSFont.systemFont(ofSize: 90, weight: NSFontWeightBlack)
+            goalLabel.alignment = .center
+            self.presentationView.addSubview(goalLabel)
+            
+            promptLabel = NSTextField(labelWithString: "Press space to skip.")
+            promptLabel.frame = NSRect(x: 0, y: presentationView.frame.minY + 30, width: presentationView.frame.width, height: 30)
+            promptLabel.font = NSFont.systemFont(ofSize: 15, weight: NSFontWeightBold)
+            promptLabel.alignment = .center
+            promptLabel.textColor = NSColor.black.withAlphaComponent(0.7)
+            self.presentationView.addSubview(promptLabel)
+            
+            view.addSubview(self.presentationView)
+            
+            self.animateGoalLabel()
+            
+            //SoundEffectPlayer.player.play(soundEffect: .puckHitBoards, indefinitely: true)
+            
+            self.presentationView.fadeIn(withDuration: 0.5, andCompletionBlock: completion)
+            
+            self.dismissTimer = Timer.scheduledTimer(timeInterval: 5, target: self, selector: #selector(dismissPresentationView), userInfo: nil, repeats: false)
+        }
+    }
+    
+    fileprivate func animateGoalLabel() {
 //        let pulseAnim = CABasicAnimation(keyPath: "transform.scale")
 //        pulseAnim.duration = 0.4
 //        pulseAnim.toValue = NSNumber(value: 0.5)
@@ -93,34 +72,48 @@ import Cocoa
 //        rotateAnim.repeatCount = .greatestFiniteMagnitude
 //        rotateAnim.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionEaseInEaseOut)
 //        self.goalLabel.layer.add(rotateAnim, forKey: "rotatingAnimation")
-//    }
-//    
-//    @objc fileprivate func dismissPresentationView() {
-//        if dismissTimer != nil {
-//           self.dismissTimer.invalidate()
-//        }
-//        UIView.animate(withDuration: 0.3, animations: {
-//            self.presentationView.alpha = 0
-//            self.goalLabel.alpha = 0
-//        }, completion: {
-//            completed in
-//            if completed {
-//                SoundEffectPlayer.player.stop()
-//                self.goalLabel.layer.removeAllAnimations()
-//                self.dismissTimer = nil
-//                self.presentationView.removeGestureRecognizer(self.dismissTapGesture)
-//                self.dismissTapGesture = nil
-//                self.presentationView.removeFromSuperview()
-//                self.presentationView = nil
-//                self.goalLabel = nil
-//                self.scoreLabel = nil
-//                self.promptLabel = nil
-//            }
-//        })
-//    }
-//    
-//    required init?(coder aDecoder: NSCoder) {
-//        fatalError("init(coder:) has not been implemented")
-//    }
-//
-//}
+    }
+    
+    @objc fileprivate func dismissPresentationView() {
+        if dismissTimer != nil {
+           self.dismissTimer.invalidate()
+        }
+        
+        self.presentationView.fadeOut(withDuration: 0.3, andCompletionBlock: {
+            //SoundEffectPlayer.player.stop()
+            self.dismissTimer = nil
+            self.presentationView.removeFromSuperview()
+            for view in self.presentationView.subviews {
+                view.removeFromSuperview()
+            }
+            self.presentationView = nil
+        })
+    }
+    
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+}
+
+public extension NSView {
+    func fadeIn(withDuration duration: TimeInterval, andCompletionBlock completion: (()->Void)? = nil) {
+        self.wantsLayer = true
+        NSAnimationContext.runAnimationGroup({
+            context in
+            self.isHidden = false
+            context.duration = duration
+            self.animator().alphaValue = 1
+        }, completionHandler: completion)
+    }
+    
+    func fadeOut(withDuration duration: TimeInterval, andCompletionBlock completion: (()->Void)? = nil) {
+        self.wantsLayer = true
+        NSAnimationContext.runAnimationGroup({
+            context in
+            self.isHidden = false
+            context.duration = duration
+            self.animator().alphaValue = 0
+        }, completionHandler: completion)
+    }
+}

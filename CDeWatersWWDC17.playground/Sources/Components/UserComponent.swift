@@ -10,6 +10,8 @@ import GameplayKit
 import SpriteKit
 import Cocoa
 
+///The UserComponent class. When added to a user controlled player, the player is selected.
+
 public class UserComponent: GKAgent2D, GKAgentDelegate, ControlKeyDelegate {
     
     public static let shared = UserComponent()
@@ -27,37 +29,59 @@ public class UserComponent: GKAgent2D, GKAgentDelegate, ControlKeyDelegate {
     }
     
     //MARK: - ControlKeyDelegate
+    
+    ///Received input from the keyboard.
     public func didRecieveKeyInput(withControlKey controlKey: ControlKey) {
+        
         if !activeMovementKeys.contains(controlKey) && controlKey.isMovementKey {
+            //Key not currently activated, and is a movement key
+            
             //Move the player
-            if activeMovementKeys.count == 0 {
+            if activeMovementKeys.count == 0 || playerComponent?.animatingSkating == false {
+                //User just began player movement, or the player is not animating skating.
+                
+                //Animate the player's skating.
                 playerComponent?.animateSkatingTextures()
             }
             else {
+                //Remove the key opposite from the one just activated.
                 self.removeOppositeKey(fromKey: controlKey)
             }
+            //Add the key just activated to the movement keys.
             activeMovementKeys.append(controlKey)
         }
+            
         else if controlKey.isDekeKey {
-          //Deking
+            //Activated key is a deke key.
+            
+            //Stop skating animation, and deke using the activated key.
             playerComponent?.stopSkatingAction()
             playerComponent?.deke(withControlKey: controlKey)
         }
+            
         else if controlKey == .upArrow {
-            //Shoot puck
+            //Activated key is the shoot key
+            
+            //Shoot the puck.
             playerComponent?.shootPuck(atPoint: Net.topNet.node.position)
         }
+            
         else if controlKey == .space {
-            //Pass the puck to closest player
+            //Activated key is the pass key.
+            
+            //Pass the puck to closest player.
             Rink.shared.selectPlayerClosestToPuck()
         }
     }
     
+    //Ended input from the keyboard.
     public func didEndKeyInput(withControlKey controlKey: ControlKey) {
         if controlKey.isDekeKey {
+            //The key is a deke key, remove deke from player.
             playerComponent?.deke()
         }
-        else {
+        else if controlKey.isMovementKey {
+            //The key is a movement key, remove it from the active movement keys.
             for i in 0..<activeMovementKeys.count {
                 if activeMovementKeys[i] == controlKey {
                     activeMovementKeys.remove(at: i)
@@ -65,11 +89,13 @@ public class UserComponent: GKAgent2D, GKAgentDelegate, ControlKeyDelegate {
                 }
             }
             if activeMovementKeys.count == 0 {
+                //This is the last active movement key, return the player to an idle state.
                 player?.playerComponent?.returnToIdle()
             }
         }
     }
     
+    ///Removes the opposite key from a specified ControlKey.
     fileprivate func removeOppositeKey(fromKey key: ControlKey) {
         for i in 0..<self.activeMovementKeys.count {
             if self.activeMovementKeys[i] == key.oppositeKey {
@@ -93,17 +119,16 @@ public class UserComponent: GKAgent2D, GKAgentDelegate, ControlKeyDelegate {
     }
     
     public func agentDidUpdate(_ agent: GKAgent) {
-        
     }
     
     //MARK: - Calculated variables
     
-    //The player entity
+    ///The player entity.
     fileprivate var player: Player? {
         return self.entity as? Player
     }
     
-    //The player component
+    ///The player component.
     fileprivate var playerComponent: PlayerComponent? {
         return self.player?.playerComponent
     }

@@ -12,9 +12,17 @@ public class Score: NSObject {
     
     static let shared = Score()
     
-    open var userScore: Int = 0
-    open var cpuScore: Int = 0
+    fileprivate var userScore: Int = 0
+    fileprivate var cpuScore: Int = 0
     
+    public func score(forUserTeam userGoal: Bool) {
+        if userGoal {
+            self.userScore += 1
+        }
+        else {
+            self.cpuScore += 1
+        }
+    }
     
     override public init() {
         super.init()

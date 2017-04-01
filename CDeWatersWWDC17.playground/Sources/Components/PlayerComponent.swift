@@ -84,7 +84,7 @@ public class PlayerComponent: GKAgent2D {
     //Remove puck and add it to the rink at its current position
     fileprivate func addPuckBackToRink() {
         //Convert position of puck in this node to the rink's coordinate system
-        let puckPosition = Rink.shared.convert(Puck.shared.position, from: self.node)
+        let puckPosition = Rink.shared.convert(Puck.shared.position, from: Puck.shared.node.parent!)
         
         Puck.shared.node.removeFromParent()
         Puck.shared.position = puckPosition
@@ -117,7 +117,8 @@ public class PlayerComponent: GKAgent2D {
     fileprivate func movePuck(withForceMagnitude magnitude: CGFloat, toPoint point: CGPoint, withPreliminaryActions actions: [SKAction]? = nil) {
         self.addPuckBackToRink()
         
-        let action = SKAction.vectorAction(withPointA: point, andPointB: Puck.shared.position, withMagnitude: magnitude, andDuration: 3.5 / Double(magnitude))
+        Puck.shared.node.removeAllActions()
+        let action = SKAction.vectorAction(withPointA: point, andPointB: self.node.position, withMagnitude: magnitude, andDuration: 3.5 / Double(magnitude))
         
         var seqAction: SKAction!
         if var actions = actions {
@@ -135,7 +136,7 @@ public class PlayerComponent: GKAgent2D {
         let shootingAction = SKAction.animate(with: PlayerTexture.shootingTextures, timePerFrame: 0.1, resize: false, restore: true)
         playerNode.run(shootingAction)
         
-        Timer.scheduledTimer(withTimeInterval: 0.1, repeats: false, block: {
+        Timer.scheduledTimer(withTimeInterval: 0.5, repeats: false, block: {
             timer in
             DispatchQueue.main.async {
                 self.setPhysicsBody()

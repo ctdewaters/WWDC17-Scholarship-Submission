@@ -21,6 +21,7 @@ public class Player: GKEntity {
     
     var delegate: PlayerDelegate?
     
+    ///Creates a Player instance with a specified color (defaults to white), and PlayerPosition.
     public init(withColor color: SKColor = .white, andPosition playerPosition: PlayerPosition) {
         super.init()
         
@@ -37,16 +38,19 @@ public class Player: GKEntity {
         fatalError("init(coder:) has not been implemented")
     }
     
+    ///Adds a MoveComponent to the player.
     public func addMovement() {
         self.playerComponent?.animateSkatingTextures()
-        let moveComponent = MoveComponent(maxSpeed: 150, maxAcceleration: 100, radius: Float(playerNodeSize.width / 2), mass: 0.3, withBehaviorType: .wander)
+        let moveComponent = MoveComponent(maxSpeed: 150, maxAcceleration: 100, radius: Float(playerNodeSize.width / 2), mass: 0.3, withBehaviorType: .chasePuck)
         self.addComponent(moveComponent)
     }
     
+    ///Updates the behavior of the player's MoveComponent.
     public func updateMoveComponent(withType type: BehaviorType) {
         self.moveComponent?.update(withBehaviorType: type)
     }
     
+    ///Removes the player's MoveComponent.
     public func removeMovement() {
         self.removeComponent(ofType: MoveComponent.self)
         self.playerComponent?.stopSkatingAction()
@@ -59,13 +63,43 @@ public class Player: GKEntity {
         return sqrt(pow(xDiff, 2) + pow(yDiff, 2))
     }
     
-    public func position(atFaceoffLocation faceoffLocation: FaceoffLocation) {
+    ///Positions this player at a specified faceoff location.
+    public func position(atFaceoffLocation faceoffLocation: FaceoffLocation, withDuration duration: TimeInterval? = nil) {
+        
+        //Remove all actions the player's holding and sprite nodes are running.
         playerNode?.removeAllActions()
         node?.removeAllActions()
-        node?.position = faceoffLocation.playerPosition(forPlayer: self)
-        self.rotate(toFacePoint: faceoffLocation.coordinate, withDuration: 0.1)
+        
+        //Check for a specified duration.
+        guard let duration = duration else {
+            //No duration specified, move player to position immediately.
+            node?.position = faceoffLocation.playerPosition(forPlayer: self)
+            self.rotate(toFacePoint: faceoffLocation.coordinate, withDuration: 0.1)
+            return
+        }
+        let skatePoint = faceoffLocation.playerPosition(forPlayer: self)
+        //Rotate the player to face the point they are skating to.
+        self.rotate(toFacePoint: skatePoint, withDuration: 0.2)
+        
+        //Begin the player's skating animation
+        self.playerComponent?.animateSkatingTextures()
+        
+        //Move the player to the skate point
+        let moveAction = SKAction.move(to: skatePoint, duration: 3)
+        //Rotate the player to face the faceoff dot.
+        let rotateAction = SKAction.rotateAction(toFacePoint: faceoffLocation.coordinate, currentPoint: skatePoint, withDuration: 0.3)
+        //Stop the skating animation
+        let removeSkatingAnimation = SKAction.run {
+            self.playerComponent?.stopSkatingAction()
+        }
+        
+        //Sequence of above actions
+        let seq = SKAction.sequence([moveAction, rotateAction, removeSkatingAnimation])
+        //Run the sequence
+        self.node?.run(seq)
     }
     
+    ///Selects the player
     public func select() {
         self.removeMovement()
         //Joystick.shared.delegate = userComponent
@@ -75,12 +109,15 @@ public class Player: GKEntity {
         self.playerComponent?.stopSkatingAction()
     }
     
+    ///Deselects the player
     public func deselect() {
         self.removeComponent(ofType: UserComponent.self)
         self.playerComponent?.deselect()
         self.playerComponent?.animateSkatingTextures()
+        self.addMovement()
     }
     
+    ///Calls on the player component to pass the puck to a specified player
     open func passPuck(toPlayer player: Player) {
         self.playerComponent?.passPuck(toPlayer: player)
         
@@ -98,6 +135,7 @@ public class Player: GKEntity {
         return self.component(ofType: PlayerComponent.self)!
     }
     
+    ///The holding node for this player.
     public var node: PlayerNode? {
         set {
             self.playerComponent?.node = newValue
@@ -107,6 +145,7 @@ public class Player: GKEntity {
         }
     }
     
+    ///The sprite node for this player.
     public var playerNode: PlayerSpriteNode? {
         set {
             self.playerComponent?.playerNode = newValue
@@ -116,6 +155,7 @@ public class Player: GKEntity {
         }
     }
     
+    ///The texture of this player's sprite node.
     public var texture: SKTexture? {
         set {
             self.playerNode?.texture = newValue
@@ -125,6 +165,7 @@ public class Player: GKEntity {
         }
     }
     
+    ///If selected, this will retrieve the player's selection node.
     public var selectionNode: SKShapeNode? {
         set {
             self.playerComponent?.selectionNode = newValue!
@@ -134,6 +175,7 @@ public class Player: GKEntity {
         }
     }
     
+    ///Does this player have the puck?
     public var hasPuck: Bool {
         set {
             self.playerComponent!.hasPuck = newValue
@@ -143,6 +185,7 @@ public class Player: GKEntity {
         }
     }
     
+    ///The position in the scene this player's node is.
     public var position: CGPoint {
         set {
             self.node?.position = newValue
@@ -152,6 +195,15 @@ public class Player: GKEntity {
         }
     }
     
+    ///The team this player is on
+    public var team: Team {
+        if self.isOnOpposingTeam {
+            return opposingTeam!
+        }
+        return userTeam!
+    }
+    
+    ///The team this player's team is facing.
     public var oppositeTeam: Team {
         if self.isOnOpposingTeam {
             return userTeam!
@@ -159,17 +211,20 @@ public class Player: GKEntity {
         return opposingTeam!
     }
     
+    ///The player's agent. If selected, will return the userComponent, otherwise the moveComponent.
     var agent: GKAgent2D {
         if let moveComponent = self.moveComponent {
             return moveComponent
         }
         return userComponent!
     }
-        
+    
+    ///This player's userComponent. (If not selected, returns nil.)
     public var userComponent: UserComponent? {
         return self.component(ofType: UserComponent.self)
     }
     
+    //This player's move component. (Returns nil if selected.)
     public var moveComponent: MoveComponent? {
         return self.component(ofType: MoveComponent.self)
     }

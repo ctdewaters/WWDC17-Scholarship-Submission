@@ -83,7 +83,7 @@ public class Rink: SKScene, SKPhysicsContactDelegate, PlayerDelegate {
         //Setting anchor point in the center
         self.anchorPoint = CGPoint(x: 0.5, y: 0.5)
         
-        self.backgroundNode = SKSpriteNode(imageNamed: "rinkBackground.png")
+        self.backgroundNode = SKSpriteNode(imageNamed: "Textures/rinkBackground.png")
         self.backgroundNode.size = size
         self.backgroundNode.zPosition = -3
         self.addChild(self.backgroundNode)
@@ -109,15 +109,22 @@ public class Rink: SKScene, SKPhysicsContactDelegate, PlayerDelegate {
         self.setPhysicsWorld()
         self.generateAndAddNodes(withTeamSize: .five, andHomeTeamColor: .black)
         Puck.shared.position = FaceoffLocation.centerIce.coordinate
-        self.positionPlayers(atFaceoffLocation: .centerIce)
-        self.selectPlayerClosestToPuck()
-
+        self.positionPlayers(atFaceoffLocation: .centerIce, withDuration: 1.5) {
+            self.selectPlayerClosestToPuck()
+            for player in userTeam! {
+                if !player.isSelected {
+                    player.addMovement()
+                }
+            }
+            for player in opposingTeam! {
+                player.addMovement()
+            }
+        }
     }
     
     //Sets the physics body shape, gravity, and contact properties
     fileprivate func setPhysicsWorld() {
         self.physicsWorld.gravity = CGVector.zero
-        self.position = CGPoint(x: 0, y: 0)
         self.physicsWorld.contactDelegate = self
         
         let pathFrame = CGRect(x: self.frame.origin.x + 108, y: self.frame.origin.y, width: 513, height: rinkSize.height)
@@ -197,7 +204,16 @@ public class Rink: SKScene, SKPhysicsContactDelegate, PlayerDelegate {
     ///Adds a teams players to the ice
     fileprivate func add(_ team: Team) {
         for player in team {
-            player.node?.position = self.position(forPlayer: player, atFaceoffLocation: .centerIce)
+            var position = self.position(forPlayer: player, atFaceoffLocation: .centerIce)
+            
+            if player.isOnOpposingTeam {
+                position.y += 150
+            }
+            else {
+                position.y -= 150
+            }
+            
+            player.node?.position = position
             self.add(entity: player)
         }
     }
@@ -214,17 +230,19 @@ public class Rink: SKScene, SKPhysicsContactDelegate, PlayerDelegate {
         self.add(entity: Net.bottomNet)
     }
     
-    public func positionPlayers(atFaceoffLocation location: FaceoffLocation) {
+    public func positionPlayers(atFaceoffLocation location: FaceoffLocation, withDuration duration: TimeInterval, andCompletion completion: (()->Void)? = nil) {
         for player in userTeam! {
             player.playerComponent?.setPhysicsBody()
-            player.position(atFaceoffLocation: location)
-            player.addMovement()
+            player.position(atFaceoffLocation: location, withDuration: duration)
         }
         for player in opposingTeam! {
             player.playerComponent?.setPhysicsBody()
-            player.position(atFaceoffLocation: location)
-            player.addMovement()
+            player.position(atFaceoffLocation: location, withDuration: duration)
         }
+        Timer.scheduledTimer(withTimeInterval: duration, repeats: false, block: {
+            timer in
+            completion?()
+        })
     }
     
     //Computes position to set player for a faceoff location
@@ -302,13 +320,13 @@ public class Rink: SKScene, SKPhysicsContactDelegate, PlayerDelegate {
         if let puckInNet = puckInNet {
             //Goal scored
             if puckInNet == Net.topNet {
-//                GoalPresentation.shared.present(toView: self.view!, withCompletion: {
-//                    Puck.shared.node.removeAllActions()
-//                    Puck.shared.node.physicsBody = nil
-//                    Puck.shared.puckComponent.setPhysicsBody()
-//                    Puck.shared.node.position = FaceoffLocation.centerIce.coordinate
-//                    self.positionPlayers(atFaceoffLocation: .centerIce)
-//                })
+                GoalPresentation.shared.present(toView: self.view!, withCompletion: {
+                    Puck.shared.node.removeAllActions()
+                    Puck.shared.node.physicsBody = nil
+                    Puck.shared.puckComponent.setPhysicsBody()
+                    Puck.shared.node.position = FaceoffLocation.centerIce.coordinate
+                    self.positionPlayers(atFaceoffLocation: .centerIce, withDuration: 1.5)
+                })
             }
             else {
                 Swift.print("Goal in bottom net!")
