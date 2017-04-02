@@ -85,7 +85,7 @@ public class Player: GKEntity {
         self.playerComponent?.animateSkatingTextures()
         
         //Move the player to the skate point
-        let moveAction = SKAction.move(to: skatePoint, duration: 3)
+        let moveAction = SKAction.move(to: skatePoint, duration: duration - 0.3)
         //Rotate the player to face the faceoff dot.
         let rotateAction = SKAction.rotateAction(toFacePoint: faceoffLocation.coordinate, currentPoint: skatePoint, withDuration: 0.3)
         //Stop the skating animation
@@ -385,7 +385,6 @@ extension Array where Element:Player {
     }
     
     func updateBehaviorToDefense() {
-        Swift.print("Updating team to defense")
         for player: Player in self {
             if player.pPosition.isDefenseman {
                 player.updateMoveComponent(withType: .defendGoal)
@@ -397,14 +396,16 @@ extension Array where Element:Player {
     }
     
     func updateBehaviorToOffense() {
-        Swift.print("Updating team to offense")
         for player: Player in self {
+            if player.hasPuck {
+                player.updateMoveComponent(withType: .attackGoal)
+                return
+            }
             player.updateMoveComponent(withType: .supportPuckCarrier)
         }
     }
     
     func chasePuck() {
-        Swift.print("Updating team to chase puck")
         for player: Player in self {
             player.updateMoveComponent(withType: .chasePuck)
         }
@@ -417,5 +418,11 @@ extension Array where Element:Player {
             }
         }
         return nil
+    }
+    
+    func setPhysicsBodies() {
+        for player: Player in self {
+            player.playerComponent?.setPhysicsBody()
+        }
     }
 }

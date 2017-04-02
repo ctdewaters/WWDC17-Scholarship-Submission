@@ -10,7 +10,7 @@ import SpriteKit
 import GameplayKit
 
 public enum BehaviorType: String {
-    case chasePuck, defendGoal, supportPuckCarrier, attackPuckCarrier, wander
+    case chasePuck, defendGoal, supportPuckCarrier, attackPuckCarrier, wander, attackGoal
     
     var goals: [GKGoal] {
         switch self {
@@ -25,6 +25,8 @@ public enum BehaviorType: String {
         case .wander :
             let goal = GKGoal(toWander: 100)
             return [goal]
+        case .attackGoal :
+            return self.attackGoalGoals
         }
     }
     
@@ -32,6 +34,8 @@ public enum BehaviorType: String {
         switch self {
         case .chasePuck, .attackPuckCarrier, .wander :
             return [1]
+        case .attackGoal :
+            return [0.5, 1]
         case .defendGoal :
             return [0.3, 0.3, 0.8, 1]
         case .supportPuckCarrier :
@@ -48,7 +52,7 @@ public enum BehaviorType: String {
         let defendGoal = GKGoal(toSeekAgent: (userTeam?.hasPuck)! ? Net.topNet.netComponent : Net.bottomNet.netComponent)
         let playerToAlignWith = Rink.shared.puckCarrier!.agent
         let alignWithPuckCarrierGoal = GKGoal(toAlignWith: [playerToAlignWith], maxDistance: 1500, maxAngle: Float.pi / 2)
-        let spreadOut = GKGoal(toAvoid: userTeam!.hasPuck ? opposingTeam!.agents : userTeam!.agents, maxPredictionTime: 0.5)
+        let spreadOut = GKGoal(toAvoid: userTeam!.hasPuck ? opposingTeam!.agents : userTeam!.agents, maxPredictionTime: 0.25)
         let attackGoal = GKGoal(toSeekAgent: playerToAlignWith)
         
         return [defendGoal, attackGoal, alignWithPuckCarrierGoal, spreadOut]
@@ -64,9 +68,16 @@ public enum BehaviorType: String {
     }
     
     private var attackPuckCarrierGoals: [GKGoal] {
-        let puckCarrier = (Rink.shared.puckCarrier?.isSelected)! ? Rink.shared.puckCarrier!.userComponent : Rink.shared.puckCarrier!.moveComponent
-        let attackGoal = GKGoal(toSeekAgent: puckCarrier!)
+        let puckCarrier = Rink.shared.puckCarrier!.agent
+        let attackGoal = GKGoal(toSeekAgent: puckCarrier)
         return [attackGoal]
+    }
+    
+    private var attackGoalGoals: [GKGoal] {
+        let goalToAttack = Rink.shared.puckCarrier!.isOnOpposingTeam ? Net.bottomNet.netComponent : Net.topNet.netComponent
+        let attackNet = GKGoal(toSeekAgent: goalToAttack)
+        let avoidOtherTeam = GKGoal(toAvoid: Rink.shared.puckCarrier!.oppositeTeam.agents, maxPredictionTime: 0.3)
+        return [attackNet, avoidOtherTeam]
     }
     
 }

@@ -185,7 +185,6 @@ public class PlayerComponent: GKAgent2D {
     
     //Animates the skating textures
     open func animateSkatingTextures() {
-        //Swift.print(arc4random())
         if !self.animatingSkating {
             self.animatingSkating = true
             self.setPhysicsBody()
@@ -201,7 +200,6 @@ public class PlayerComponent: GKAgent2D {
     
     //Stops skating texture animation
     open func stopSkatingAction() {
-        //print("Stopping skating")
         self.playerNode.removeAction(forKey: "skatingAction")
         
         self.playerNode.texture = PlayerTexture.faceoff

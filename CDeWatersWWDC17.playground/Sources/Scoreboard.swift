@@ -9,7 +9,7 @@ public class Scoreboard: NSVisualEffectView {
     private var opposingScoreView: ScoreView!
     private var clockView: ClockView!
     
-    public override init(frame frameRect: NSRect) {
+    public init(frame frameRect: NSRect, withTotalTime time: TimeInterval) {
         super.init(frame: frameRect)
 
         self.wantsLayer = true
@@ -22,7 +22,7 @@ public class Scoreboard: NSVisualEffectView {
         
         userScoreView = ScoreView(frame: NSRect(x: 0, y: 0, width: viewWidth, height: frameRect.height), isUserTeam: true)
         opposingScoreView = ScoreView(frame: NSRect(x: userScoreView.frame.maxX, y: 0, width: viewWidth, height: frameRect.height), isUserTeam: false)
-        clockView = ClockView(frame: NSRect(x: opposingScoreView.frame.maxX, y: 0, width: viewWidth, height: frameRect.height), withTotalTime: TimeInterval(withMinutes: 3, andSeconds: 0))
+        clockView = ClockView(frame: NSRect(x: opposingScoreView.frame.maxX, y: 0, width: viewWidth, height: frameRect.height), withTotalTime: time)
         
         self.addSubview(userScoreView)
         self.addSubview(opposingScoreView)
@@ -78,7 +78,19 @@ fileprivate class ScoreView: NSView {
     
     @objc private func scoreGoal() {
         let currentScore = Int(self.scoreLabel.stringValue)!
-        self.scoreLabel.stringValue = "\(currentScore + 1)"
+        NSAnimationContext.runAnimationGroup({
+            context in
+            context.duration = 0.175
+            self.scoreLabel.alphaValue = 0
+        }, completionHandler: {
+            self.scoreLabel.stringValue = "\(currentScore + 1)"
+            NSAnimationContext.runAnimationGroup({
+                context in
+                context.duration = 0.175
+                self.scoreLabel.alphaValue = 1
+            }, completionHandler: nil)
+        })
+        
     }
     
     required init?(coder: NSCoder) {
@@ -101,7 +113,7 @@ fileprivate class ClockView: NSView {
         self.timeLabel = NSTextField(labelWithString: self.currentTime.string)
         self.timeLabel.font = NSFont.systemFont(ofSize: frameRect.height * 0.6, weight: NSFontWeightRegular)
         self.timeLabel.textColor = .white
-        self.timeLabel.alignment = .right
+        self.timeLabel.alignment = .center
         self.timeLabel.frame = self.bounds
         self.timeLabel.frame.origin.y = -2.5
         self.addSubview(timeLabel)
@@ -125,6 +137,11 @@ fileprivate class ClockView: NSView {
     @objc private func update() {
         self.currentTime = self.currentTime - 0.01
         self.timeLabel.stringValue = self.currentTime.string
+        if Int(self.currentTime) == 0 {
+            self.timer.invalidate()
+            self.timer = nil
+            NotificationCenter.default.post(name: .gameDidEnd, object: nil)
+        }
     }
     
     required init?(coder: NSCoder) {
@@ -137,6 +154,7 @@ public extension Notification.Name {
     static let userTeamGoalScored = Notification.Name("userTeamGoalScored")
     static let opposingTeamGoalScored = Notification.Name("opposingTeamGoalScored")
     static let didReturnToPlay = Notification.Name("didReturnToPlay")
+    static let gameDidEnd = Notification.Name("gameDidEnd")
 }
 
 //Extending TimeInterval
@@ -150,9 +168,11 @@ public extension TimeInterval {
         if self > 60.0 {
             let minutes = Int(self / 60.0)
             let seconds = Int(self.truncatingRemainder(dividingBy: 60.0))
+            let secondsString = String(format: "%02d", seconds)
             
-            return "\(minutes):\(seconds)"
+            return "\(minutes):\(secondsString)"
         }
-        return "0:\(self)"
+        let str = String(format: "%04.2f", self)
+        return ":\(str)"
     }
 }

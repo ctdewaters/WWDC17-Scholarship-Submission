@@ -30,7 +30,6 @@ public class MoveComponent: GKAgent2D, GKAgentDelegate {
     }
     
     public func update(withBehaviorType type: BehaviorType) {
-        Swift.print("Updated behavior with type \(type)")
         self.behavior?.removeAllGoals()
         for i in 0..<type.goals.count {
             let goal = type.goals[i]
@@ -62,6 +61,25 @@ public class MoveComponent: GKAgent2D, GKAgentDelegate {
         let facePoint = CGPoint(x: playerComponent.node.position.x + CGFloat(self.velocity.x), y: playerComponent.node.position.y + CGFloat(self.velocity.y))
         let faceAction = SKAction.rotateAction(toFacePoint: facePoint, currentPoint: playerComponent.node.position, withDuration: 0.1)
         playerComponent.node.run(faceAction)
+        
+        if playerComponent.hasPuck && playerComponent.isOnOpposingTeam {
+            //Determine what we will do with the puck
+            
+            let rand = Int.random(lowerBound: 0, upperBound: Int(playerComponent.node.position.distance(fromPoint: Net.bottomNet.node.position)))
+            
+            if rand == 7 {
+                //Shoot the puck
+                playerComponent.shootPuck(atPoint: Net.bottomNet.node.position)
+            }
+            else if rand < 5 && rand.isEven {
+                //Pass to another player
+                playerComponent.passPuck(toPlayer: opposingTeam![Int.random(lowerBound: 0, upperBound: opposingTeam!.count - 1)])
+            }
+        }
+        
+        if !playerComponent.animatingSkating {
+            playerComponent.animateSkatingTextures()
+        }
     }
     
     //MARK: - Movement functions
@@ -84,6 +102,10 @@ public extension CGPoint {
         self.x = CGFloat(x)
         self.y = CGFloat(y)
     }
+    
+    func distance(fromPoint point: CGPoint) -> CGFloat {
+        return CGFloat(abs(sqrt(pow(self.x - point.x, 2) + pow(self.y - point.y, 2))))
+    }
 }
 
 public extension float2 {
@@ -103,3 +125,18 @@ public extension CGVector {
         return atan2(self.dy, self.dx)
     }
 }
+
+fileprivate extension Int {
+    static func random (lowerBound: Int , upperBound: Int) -> Int {
+        let param = UInt32(upperBound - lowerBound + 1)
+        return lowerBound + Int(arc4random_uniform(param))
+    }
+    
+    var isEven: Bool {
+        if self % 2 == 0 {
+            return true
+        }
+        return false
+    }
+}
+
