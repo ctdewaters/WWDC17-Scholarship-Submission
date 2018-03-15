@@ -1,16 +1,13 @@
 //: # Creating a 2D Hockey Game
 //: ## Using GameplayKit and SpriteKit
-
 import Cocoa
 import PlaygroundSupport
 import SpriteKit
-
 //: ## Creating the `GameView`.
 //: First, we create our `GameView`, which is a subclass of `SKView`.
 //: We set it's `frame` and background color.
 let skView = GameView(frame: CGRect(x: 0, y: 0, width: 728, height: 728))
 skView.layer?.backgroundColor = sceneBackgroundColor.cgColor
-
 //: ## Creating the `Rink`.
 //: We set the `scaleMode` of the shared `Rink` object, and present it to the scene.
 Rink.shared.scaleMode = .aspectFill

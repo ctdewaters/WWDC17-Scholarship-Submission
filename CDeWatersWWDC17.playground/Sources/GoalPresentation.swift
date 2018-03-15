@@ -35,13 +35,13 @@ class GoalPresentation: NSObject {
             goalLabel = NSTextField(labelWithString: "GOAL!!!")
             goalLabel.frame = NSRect(x: 0, y: (view.frame.height / 2) + 50, width: presentationView.frame.width, height: 100)
             goalLabel.textColor = .red
-            goalLabel.font = NSFont.systemFont(ofSize: 90, weight: NSFontWeightBlack)
+            goalLabel.font = NSFont.systemFont(ofSize: 90, weight: .black)
             goalLabel.alignment = .center
             self.presentationView.addSubview(goalLabel)
             
             promptLabel = NSTextField(labelWithString: "Press space to skip.")
             promptLabel.frame = NSRect(x: 0, y: presentationView.frame.minY + 30, width: presentationView.frame.width, height: 30)
-            promptLabel.font = NSFont.systemFont(ofSize: 15, weight: NSFontWeightBold)
+            promptLabel.font = NSFont.systemFont(ofSize: 15, weight: .bold)
             promptLabel.alignment = .center
             promptLabel.textColor = NSColor.black.withAlphaComponent(0.7)
             self.presentationView.addSubview(promptLabel)

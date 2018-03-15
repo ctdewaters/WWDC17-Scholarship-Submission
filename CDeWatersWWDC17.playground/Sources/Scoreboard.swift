@@ -15,7 +15,7 @@ public class Scoreboard: NSVisualEffectView {
         self.wantsLayer = true
         self.layer?.cornerRadius = frameRect.height / 2
         
-        self.material = NSVisualEffectMaterial.dark
+        self.material = NSVisualEffectView.Material.dark
         self.blendingMode = .withinWindow
                 
         let viewWidth = frameRect.width / 3
@@ -61,14 +61,14 @@ fileprivate class ScoreView: NSView {
         //Setting up the team name label
         teamNameLabel = NSTextField(labelWithString: isOnUserTeam ? "Home" : "Away")
         teamNameLabel.textColor = .white
-        teamNameLabel.font = NSFont.systemFont(ofSize: frameRect.height * 0.6, weight: NSFontWeightRegular)
+        teamNameLabel.font = NSFont.systemFont(ofSize: frameRect.height * 0.6, weight: NSFont.Weight.regular)
         teamNameLabel.frame = NSRect(x: 0, y: -2.5, width: frameRect.width * 0.7, height: frameRect.height)
         teamNameLabel.alignment = .center
         self.addSubview(teamNameLabel)
         
         //Setting up the team's score label
         scoreLabel = NSTextField(labelWithString: "0")
-        scoreLabel.font = NSFont.systemFont(ofSize: frameRect.height * 0.6, weight: NSFontWeightBold)
+        scoreLabel.font = NSFont.systemFont(ofSize: frameRect.height * 0.6, weight: NSFont.Weight.bold)
         scoreLabel.alignment = .right
         scoreLabel.textColor = .white
         scoreLabel.frame = NSRect(x: teamNameLabel.frame.maxX, y: -2.5, width: frameRect.width * 0.3, height: frameRect.height)
@@ -111,7 +111,7 @@ fileprivate class ClockView: NSView {
         
         //Setting and adding the time label
         self.timeLabel = NSTextField(labelWithString: self.currentTime.string)
-        self.timeLabel.font = NSFont.systemFont(ofSize: frameRect.height * 0.6, weight: NSFontWeightRegular)
+        self.timeLabel.font = NSFont.systemFont(ofSize: frameRect.height * 0.6, weight: NSFont.Weight.regular)
         self.timeLabel.textColor = .white
         self.timeLabel.alignment = .center
         self.timeLabel.frame = self.bounds
